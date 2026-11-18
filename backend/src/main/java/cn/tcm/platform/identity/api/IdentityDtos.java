@@ -13,7 +13,7 @@ public final class IdentityDtos {
     public record Application(@NotBlank @Pattern(regexp="CONTRIBUTOR") String roleCode,@NotBlank @Size(max=2000) String statement) {}
     public record Decision(@NotBlank @Pattern(regexp="APPROVED|REJECTED") String decision,@NotBlank @Size(max=2000) String note) {}
     public record Status(@NotBlank @Pattern(regexp="ACTIVE|DISABLED") String status) {}
-    public record Roles(@NotEmpty @Size(max=4) Set<@Pattern(regexp="LEARNER|CONTRIBUTOR|REVIEWER|ADMIN") String> roles) {}
+    public record Roles(@NotEmpty @Size(max=4) Set<@NotNull @Pattern(regexp="LEARNER|CONTRIBUTOR|REVIEWER|ADMIN") String> roles) {}
     public record UserView(String id,String username,String nickname,String bio,String status,List<String> roles,List<String> permissions,String createdAt) {}
     public record ApplicationView(String id,String userId,String username,String roleCode,String statement,String status,String reviewerId,String reviewNote,String reviewedAt,String createdAt) {}
     public record AuthView(String accessToken,long expiresIn,UserView user) {}

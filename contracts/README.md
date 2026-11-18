@@ -1,6 +1,12 @@
 # API与服务契约基线
 
-当前是设计契约，尚未实现OpenAPI或业务接口。外部前缀/api/v1；内部前缀/internal/v1，内部接口不通过Nginx公开。
+外部前缀/api/v1；内部前缀/internal/v1，内部接口不通过Nginx公开。第一阶段已实现账户、角色资格、用户管理与健康端点；下表其他业务接口仍为设计契约。尚未生成OpenAPI文件。
+
+第一阶段补充接口：GET /me/role-applications；GET /admin/users；PATCH /admin/users/{id}/status；PUT /admin/users/{id}/roles；GET /admin/role-applications。角色修改要求system:role:manage，其他账户管理要求system:user:manage。用户不能在该接口修改自己的角色或禁用自己；LEARNER基础角色保留。
+
+Cookie：tcm_refresh，HttpOnly，SameSite=Strict，Path=/api/v1/auth。refresh/logout必须携带受信任Origin和X-CSRF-Token: 1，自定义头要求浏览器预检，配合精确Origin列表防止跨站调用。生产Cookie默认Secure。登录响应只返回短期accessToken、expiresIn和用户视图，刷新令牌仅通过Set-Cookie返回。重放旧刷新令牌撤销整个登录链，旧JWT随之失效；退出、禁用同样即时撤销。
+
+已实现Java健康：GET /actuator/health/liveness、/actuator/health/readiness，后者包含数据库检查。GET /api/v1/capabilities明确当前问答未实现。AI内部健康：GET /internal/v1/health/liveness、/health/readiness、/capabilities，请求带X-Internal-Token。
 
 | 领域 | 主要路由 | 规则 |
 |---|---|---|

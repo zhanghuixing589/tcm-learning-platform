@@ -38,4 +38,6 @@ public interface IdentityMapper extends BaseMapper<UserAccount> {
     List<RoleApplication> applications(@Param("user")Long user,@Param("limit")int limit,@Param("offset")int offset);
     @Select("<script>SELECT COUNT(*) FROM sys_role_applications <if test='user != null'>WHERE user_id=#{user}</if></script>") long applicationCount(@Param("user")Long user);
     @Update("UPDATE sys_role_applications SET status=#{status},reviewer_id=#{reviewerId},review_note=#{reviewNote},reviewed_at=UTC_TIMESTAMP(3) WHERE id=#{id}") void decision(RoleApplication application);
+    @Insert("INSERT INTO sys_audit_logs(actor_id,trace_id,action,object_type,object_key) VALUES(#{actor},#{trace},#{action},#{type},#{key})")
+    void audit(@Param("actor")long actor,@Param("trace")String trace,@Param("action")String action,@Param("type")String type,@Param("key")String key);
 }

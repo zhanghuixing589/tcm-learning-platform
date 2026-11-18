@@ -58,8 +58,9 @@ public class SecurityConfiguration {
                                 if(!header.startsWith("Bearer "))throw new IllegalArgumentException();
                                 var jwt=tokens.decode(header.substring(7));long id=Long.parseLong(jwt.getSubject());
                                 var user=mapper.selectById(id);
-                                if(user==null || !"ACTIVE".equals(user.status) || jwt.getClaimAsInt("cv")==null
-                                        || user.credentialVersion.intValue()!=jwt.getClaimAsInt("cv")
+                                Object version=jwt.getClaim("cv");
+                                if(user==null || !"ACTIVE".equals(user.status) || !(version instanceof Number)
+                                        || user.credentialVersion.intValue()!=((Number)version).intValue()
                                         || mapper.activeFamily(id,jwt.getClaimAsString("sid"))==0)throw new IllegalArgumentException();
                                 var authorities=new ArrayList<SimpleGrantedAuthority>();
                                 mapper.roles(id).forEach(r->authorities.add(new SimpleGrantedAuthority("ROLE_"+r)));

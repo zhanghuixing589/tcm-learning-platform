@@ -19,11 +19,17 @@ public class IdentityService {
     private final PasswordEncoder passwords;
     private final TokenService tokens;
     private final SecurityProperties properties;
+    private final String unknownUserHash;
     public record Issued(AuthView body,String refresh) {}
     public IdentityService(IdentityMapper mapper,PasswordEncoder passwords,TokenService tokens,SecurityProperties properties) {
         this.mapper=mapper;this.passwords=passwords;this.tokens=tokens;this.properties=properties;
+        this.unknownUserHash=passwords.encode(UUID.randomUUID().toString());
     }
     private static String utc(LocalDateTime time) { return time==null?null:time.toInstant(ZoneOffset.UTC).toString(); }
+    private void audit(long actor,String action,String type,long id) {
+        String trace=org.slf4j.MDC.get("traceId");
+        mapper.audit(actor,trace==null?UUID.randomUUID().toString():trace,action,type,Long.toString(id));
+    }
     public UserView view(UserAccount user) {
         return new UserView(user.id.toString(),user.username,user.nickname,user.bio,user.status,
                 mapper.roles(user.id),mapper.permissions(user.id),utc(user.createdAt));
@@ -39,11 +45,11 @@ public class IdentityService {
     @Transactional public Issued login(Login input) {
         UserAccount found=mapper.byUsername(input.username());
         // Equal BCrypt work for unknown users limits account enumeration by timing.
-        String encoded=found==null?"$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy":found.passwordHash;
+        String encoded=found==null?unknownUserHash:found.passwordHash;
         boolean matches=passwords.matches(input.password(),encoded);
-        if(found==null || !matches) throw ApiException.unauthorized();
+        if(found==null || !matches) throw new ApiException(401,"UNAUTHENTICATED","用户名或密码不正确，或账号已停用");
         UserAccount user=mapper.lockUser(found.id);
-        if(!"ACTIVE".equals(user.status)) throw ApiException.unauthorized();
+        if(!"ACTIVE".equals(user.status)) throw new ApiException(401,"UNAUTHENTICATED","用户名或密码不正确，或账号已停用");
         mapper.loginTime(user.id);
         return issue(user,UUID.randomUUID().toString());
     }
@@ -79,7 +85,7 @@ public class IdentityService {
     @Transactional public UserView status(long actor,long id,Status input) {
         if(actor==id) throw ApiException.conflict("不能在此禁用自己的账号");
         UserAccount user=mapper.lockUser(id);if(user==null)throw ApiException.missing();
-        if(!input.status().equals(user.status)) {mapper.status(id,input.status());mapper.revokeUser(id);}
+        if(!input.status().equals(user.status)) {mapper.status(id,input.status());mapper.revokeUser(id);audit(actor,"USER_STATUS_CHANGED","USER",id);}
         return me(id);
     }
     @Transactional public UserView roles(long actor,long id,Roles input) {
@@ -87,6 +93,7 @@ public class IdentityService {
         if(mapper.lockUser(id)==null)throw ApiException.missing();
         mapper.clearRoles(id);mapper.grant(id,"LEARNER",actor);
         for(String code:input.roles())mapper.grant(id,code,actor);
+        audit(actor,"USER_ROLES_CHANGED","USER",id);
         return me(id);
     }
     private ApplicationView applicationView(RoleApplication a) {
@@ -112,6 +119,7 @@ public class IdentityService {
         if(!"PENDING".equals(a.status))throw ApiException.conflict("申请已处理，请刷新列表");
         a.status=input.decision();a.reviewerId=actor;a.reviewNote=input.note().trim();mapper.decision(a);
         if("APPROVED".equals(a.status))mapper.grant(a.userId,"CONTRIBUTOR",actor);
+        audit(actor,"ROLE_APPLICATION_"+a.status,"ROLE_APPLICATION",id);
         return applicationView(mapper.application(id));
     }
 }

@@ -148,4 +148,22 @@ class IdentityIntegrationTest {
         Login a=admin();
         mvc.perform(get("/api/v1/admin/users?pageSize=101").header("Authorization","Bearer "+a.access())).andExpect(status().isBadRequest());
     }
+    @Test void explicitRoleGrantIsAuditedAndSelfReviewIsRejected() throws Exception {
+        Login a=admin(), u=register();
+        mvc.perform(put("/api/v1/admin/users/"+u.id()+"/roles").header("Authorization","Bearer "+a.access())
+                .contentType("application/json").content("{\"roles\":[\"LEARNER\",\"REVIEWER\"]}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.permissions").value(org.hamcrest.Matchers.hasItem("knowledge:review")));
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM sys_audit_logs WHERE actor_id=? AND object_key=? AND action='USER_ROLES_CHANGED'",Integer.class,a.id(),u.id())).isEqualTo(1);
+        mvc.perform(put("/api/v1/admin/users/"+u.id()+"/roles").header("Authorization","Bearer "+a.access())
+                .contentType("application/json").content("{\"roles\":[null]}"))
+                .andExpect(status().isBadRequest());
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM sys_user_roles ur JOIN sys_roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.code='REVIEWER'",Integer.class,u.id())).isEqualTo(1);
+        MvcResult r=mvc.perform(post("/api/v1/me/role-applications").header("Authorization","Bearer "+a.access())
+                .contentType("application/json").content("{\"roleCode\":\"CONTRIBUTOR\",\"statement\":\"本人申请\"}"))
+                .andExpect(status().isCreated()).andReturn();
+        String id=json.readTree(r.getResponse().getContentAsString()).path("data").path("id").asText();
+        mvc.perform(patch("/api/v1/admin/role-applications/"+id).header("Authorization","Bearer "+a.access())
+                .contentType("application/json").content("{\"decision\":\"APPROVED\",\"note\":\"本人处理\"}"))
+                .andExpect(status().isConflict());
+    }
 }
