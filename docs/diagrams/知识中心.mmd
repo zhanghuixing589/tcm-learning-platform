@@ -1,0 +1,11 @@
+erDiagram
+  content_resources ||--o{ knowledge_entries : "resource_id"
+  knowledge_entries ||--o{ knowledge_aliases : "knowledge_resource_id"
+  content_revisions ||--o{ herb_profiles : "revision_id"
+  content_revisions ||--o{ formula_profiles : "revision_id"
+  knowledge_entries ||--o{ formula_ingredients : "formula_resource_id"
+  knowledge_entries ||--o{ knowledge_relations : "source_resource_id"
+  content_revisions ||--o{ formula_ingredients : "formula_resource_id,formula_revision_id"
+  content_revisions ||--o{ knowledge_relations : "source_resource_id,source_revision_id"
+  revision_evidence ||--o{ formula_ingredients : "formula_revision_id,evidence_id"
+  revision_evidence ||--o{ knowledge_relations : "source_revision_id,evidence_id"

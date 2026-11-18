@@ -1,0 +1,959 @@
+[
+  {
+    "code": "K01",
+    "module": "知识库中心",
+    "name": "资料提交",
+    "tables": [
+      "source_documents",
+      "file_objects"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K02",
+    "module": "知识库中心",
+    "name": "格式检查",
+    "tables": [
+      "file_objects"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K03",
+    "module": "知识库中心",
+    "name": "资料解析",
+    "tables": [
+      "document_parse_runs",
+      "document_segments"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K04",
+    "module": "知识库中心",
+    "name": "重复检查",
+    "tables": [
+      "file_objects",
+      "source_documents"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K05",
+    "module": "知识库中心",
+    "name": "条目抽取",
+    "tables": [
+      "content_revisions",
+      "knowledge_entries",
+      "async_jobs"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K06",
+    "module": "知识库中心",
+    "name": "术语归一",
+    "tables": [
+      "knowledge_entries",
+      "knowledge_aliases"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K07",
+    "module": "知识库中心",
+    "name": "内容校正",
+    "tables": [
+      "content_revisions",
+      "revision_evidence"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K08",
+    "module": "知识库中心",
+    "name": "草稿管理",
+    "tables": [
+      "content_resources",
+      "content_revisions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K09",
+    "module": "知识库中心",
+    "name": "提交审核",
+    "tables": [
+      "review_tasks",
+      "content_revisions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K10",
+    "module": "知识库中心",
+    "name": "审核退回",
+    "tables": [
+      "review_tasks",
+      "review_events"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K11",
+    "module": "知识库中心",
+    "name": "知识发布",
+    "tables": [
+      "content_resources",
+      "async_jobs"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K12",
+    "module": "知识库中心",
+    "name": "修订申请",
+    "tables": [
+      "resource_feedback",
+      "content_revisions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K13",
+    "module": "知识库中心",
+    "name": "版本对比",
+    "tables": [
+      "content_revisions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K14",
+    "module": "知识库中心",
+    "name": "停用恢复",
+    "tables": [
+      "content_resources",
+      "sys_audit_logs"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K15",
+    "module": "知识库中心",
+    "name": "索引任务",
+    "tables": [
+      "async_jobs",
+      "async_job_attempts"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "K16",
+    "module": "知识库中心",
+    "name": "管理统计",
+    "tables": [
+      "source_documents",
+      "review_tasks",
+      "async_jobs"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z01",
+    "module": "知识中心",
+    "name": "分类浏览",
+    "tables": [
+      "content_categories",
+      "knowledge_entries"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z02",
+    "module": "知识中心",
+    "name": "别名检索",
+    "tables": [
+      "knowledge_aliases",
+      "knowledge_entries"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z03",
+    "module": "知识中心",
+    "name": "条件筛选",
+    "tables": [
+      "content_revisions",
+      "revision_tags",
+      "knowledge_relations"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z04",
+    "module": "知识中心",
+    "name": "概念详情",
+    "tables": [
+      "knowledge_entries",
+      "content_revisions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z05",
+    "module": "知识中心",
+    "name": "药材详情",
+    "tables": [
+      "herb_profiles",
+      "knowledge_relations"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z06",
+    "module": "知识中心",
+    "name": "方剂详情",
+    "tables": [
+      "formula_profiles",
+      "formula_ingredients"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z07",
+    "module": "知识中心",
+    "name": "关联浏览",
+    "tables": [
+      "knowledge_relations",
+      "formula_ingredients"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z08",
+    "module": "知识中心",
+    "name": "查看来源",
+    "tables": [
+      "revision_evidence",
+      "document_segments"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z09",
+    "module": "知识中心",
+    "name": "方剂对比",
+    "tables": [
+      "formula_ingredients",
+      "formula_profiles"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z10",
+    "module": "知识中心",
+    "name": "药材解析",
+    "tables": [
+      "knowledge_aliases"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z11",
+    "module": "知识中心",
+    "name": "方剂识别",
+    "tables": [
+      "formula_ingredients",
+      "knowledge_entries"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z12",
+    "module": "知识中心",
+    "name": "学习解读",
+    "tables": [
+      "formula_profiles",
+      "revision_evidence",
+      "qa_runs"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z13",
+    "module": "知识中心",
+    "name": "收藏历史",
+    "tables": [
+      "resource_bookmarks",
+      "user_resource_history"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z14",
+    "module": "知识中心",
+    "name": "知识纠错",
+    "tables": [
+      "resource_feedback"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Z15",
+    "module": "知识中心",
+    "name": "关联入口与无结果",
+    "tables": [
+      "card_knowledge_links",
+      "community_knowledge_links",
+      "resource_feedback"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q01",
+    "module": "问答助手",
+    "name": "管理会话",
+    "tables": [
+      "qa_sessions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q02",
+    "module": "问答助手",
+    "name": "历史问答",
+    "tables": [
+      "qa_sessions",
+      "qa_messages"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q03",
+    "module": "问答助手",
+    "name": "多轮上下文",
+    "tables": [
+      "qa_messages"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q04",
+    "module": "问答助手",
+    "name": "问题路由",
+    "tables": [
+      "qa_runs",
+      "knowledge_aliases"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q05",
+    "module": "问答助手",
+    "name": "多路检索",
+    "tables": [
+      "qa_retrieval_hits",
+      "knowledge_relations",
+      "document_segments"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q06",
+    "module": "问答助手",
+    "name": "证据筛选",
+    "tables": [
+      "qa_retrieval_hits",
+      "content_resources",
+      "source_documents"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q07",
+    "module": "问答助手",
+    "name": "证据生成",
+    "tables": [
+      "qa_messages",
+      "qa_runs"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q08",
+    "module": "问答助手",
+    "name": "引用标注",
+    "tables": [
+      "qa_citations"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q09",
+    "module": "问答助手",
+    "name": "证据查看",
+    "tables": [
+      "qa_citations",
+      "revision_evidence"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q10",
+    "module": "问答助手",
+    "name": "不足拒答",
+    "tables": [
+      "qa_messages",
+      "qa_runs"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q11",
+    "module": "问答助手",
+    "name": "流式停止",
+    "tables": [
+      "qa_messages",
+      "qa_runs"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q12",
+    "module": "问答助手",
+    "name": "场景提问",
+    "tables": [
+      "qa_sessions",
+      "qa_messages"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q13",
+    "module": "问答助手",
+    "name": "方剂解读",
+    "tables": [
+      "formula_ingredients",
+      "qa_messages"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q14",
+    "module": "问答助手",
+    "name": "评价保存",
+    "tables": [
+      "qa_feedback",
+      "qa_saved_answers"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q15",
+    "module": "问答助手",
+    "name": "使用与异常",
+    "tables": [
+      "sys_user_roles",
+      "qa_runs"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "Q16",
+    "module": "问答助手",
+    "name": "运行记录",
+    "tables": [
+      "qa_runs",
+      "qa_retrieval_hits"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L01",
+    "module": "学习测验",
+    "name": "学习首页",
+    "tables": [
+      "user_enrollments",
+      "user_wrong_questions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L02",
+    "module": "学习测验",
+    "name": "专题浏览",
+    "tables": [
+      "learning_topics",
+      "topic_profiles"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L03",
+    "module": "学习测验",
+    "name": "目录管理",
+    "tables": [
+      "topic_cards",
+      "content_revisions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L04",
+    "module": "学习测验",
+    "name": "入门测验",
+    "tables": [
+      "learning_assessments",
+      "quiz_attempts"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L05",
+    "module": "学习测验",
+    "name": "起点建议",
+    "tables": [
+      "quiz_attempt_items",
+      "question_knowledge_links"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L06",
+    "module": "学习测验",
+    "name": "卡片学习",
+    "tables": [
+      "learning_cards",
+      "content_revisions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L07",
+    "module": "学习测验",
+    "name": "卡片管理",
+    "tables": [
+      "learning_cards",
+      "card_knowledge_links",
+      "review_tasks"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L08",
+    "module": "学习测验",
+    "name": "完成续学",
+    "tables": [
+      "user_card_progress",
+      "user_enrollments"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L09",
+    "module": "学习测验",
+    "name": "卡片小测",
+    "tables": [
+      "learning_assessments",
+      "assessment_questions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L10",
+    "module": "学习测验",
+    "name": "题库管理",
+    "tables": [
+      "question_profiles",
+      "question_options"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L11",
+    "module": "学习测验",
+    "name": "题目审核",
+    "tables": [
+      "review_tasks",
+      "content_resources"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L12",
+    "module": "学习测验",
+    "name": "自动评分",
+    "tables": [
+      "quiz_attempts",
+      "quiz_attempt_items",
+      "quiz_attempt_answers"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L13",
+    "module": "学习测验",
+    "name": "解析回看",
+    "tables": [
+      "quiz_attempt_items",
+      "question_knowledge_links"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L14",
+    "module": "学习测验",
+    "name": "成绩分析",
+    "tables": [
+      "quiz_attempts",
+      "quiz_attempt_items"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L15",
+    "module": "学习测验",
+    "name": "收集错题",
+    "tables": [
+      "user_wrong_questions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L16",
+    "module": "学习测验",
+    "name": "错题再练",
+    "tables": [
+      "user_wrong_questions",
+      "quiz_attempts"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L17",
+    "module": "学习测验",
+    "name": "进度统计",
+    "tables": [
+      "user_enrollments",
+      "user_card_progress"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "L18",
+    "module": "学习测验",
+    "name": "版本与恢复",
+    "tables": [
+      "quiz_attempt_items",
+      "quiz_attempt_answers",
+      "content_revisions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R01",
+    "module": "个性化推荐",
+    "name": "行为采集",
+    "tables": [
+      "behavior_events"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R02",
+    "module": "个性化推荐",
+    "name": "主动兴趣",
+    "tables": [
+      "user_tag_preferences"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R03",
+    "module": "个性化推荐",
+    "name": "兴趣画像",
+    "tables": [
+      "user_interest_scores"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R04",
+    "module": "个性化推荐",
+    "name": "学习状态",
+    "tables": [
+      "user_card_progress",
+      "quiz_attempts",
+      "user_wrong_questions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R05",
+    "module": "个性化推荐",
+    "name": "新用户推荐",
+    "tables": [
+      "user_tag_preferences",
+      "recommendation_strategies"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R06",
+    "module": "个性化推荐",
+    "name": "内容相似",
+    "tables": [
+      "recommendation_items",
+      "content_revisions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R07",
+    "module": "个性化推荐",
+    "name": "热度召回",
+    "tables": [
+      "behavior_events",
+      "resource_likes",
+      "resource_bookmarks"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R08",
+    "module": "个性化推荐",
+    "name": "继续学习",
+    "tables": [
+      "topic_cards",
+      "user_enrollments",
+      "user_card_progress"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R09",
+    "module": "个性化推荐",
+    "name": "错题推荐",
+    "tables": [
+      "user_wrong_questions",
+      "question_knowledge_links",
+      "card_knowledge_links"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R10",
+    "module": "个性化推荐",
+    "name": "融合排序",
+    "tables": [
+      "recommendation_strategies",
+      "recommendation_items"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R11",
+    "module": "个性化推荐",
+    "name": "过滤多样性",
+    "tables": [
+      "content_resources",
+      "revision_tags",
+      "recommendation_feedback"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R12",
+    "module": "个性化推荐",
+    "name": "推荐理由",
+    "tables": [
+      "recommendation_items"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R13",
+    "module": "个性化推荐",
+    "name": "推荐反馈",
+    "tables": [
+      "recommendation_feedback"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R14",
+    "module": "个性化推荐",
+    "name": "曝光效果",
+    "tables": [
+      "recommendation_requests",
+      "recommendation_items",
+      "behavior_events"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "R15",
+    "module": "个性化推荐",
+    "name": "配置评估",
+    "tables": [
+      "recommendation_strategies",
+      "recommendation_requests"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C01",
+    "module": "科普社区",
+    "name": "分区列表",
+    "tables": [
+      "community_sections",
+      "community_post_profiles"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C02",
+    "module": "科普社区",
+    "name": "讨论发布",
+    "tables": [
+      "content_resources",
+      "content_revisions",
+      "community_post_profiles"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C03",
+    "module": "科普社区",
+    "name": "文章投稿",
+    "tables": [
+      "content_resources",
+      "content_revisions",
+      "review_tasks"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C04",
+    "module": "科普社区",
+    "name": "内容详情",
+    "tables": [
+      "community_post_profiles",
+      "content_revisions",
+      "revision_evidence"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C05",
+    "module": "科普社区",
+    "name": "评论回复",
+    "tables": [
+      "community_comments"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C06",
+    "module": "科普社区",
+    "name": "点赞收藏",
+    "tables": [
+      "resource_likes",
+      "resource_bookmarks"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C07",
+    "module": "科普社区",
+    "name": "内容检索",
+    "tables": [
+      "content_revisions",
+      "revision_tags",
+      "community_post_profiles"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C08",
+    "module": "科普社区",
+    "name": "我的内容",
+    "tables": [
+      "content_resources",
+      "content_revisions",
+      "review_tasks"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C09",
+    "module": "科普社区",
+    "name": "发布后修改",
+    "tables": [
+      "content_revisions",
+      "content_resources"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C10",
+    "module": "科普社区",
+    "name": "社区审核",
+    "tables": [
+      "review_tasks",
+      "review_events"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C11",
+    "module": "科普社区",
+    "name": "内容举报",
+    "tables": [
+      "community_reports"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C12",
+    "module": "科普社区",
+    "name": "治理处理",
+    "tables": [
+      "community_moderation_actions",
+      "community_reports"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C13",
+    "module": "科普社区",
+    "name": "转知识资料",
+    "tables": [
+      "source_documents",
+      "content_revisions"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C14",
+    "module": "科普社区",
+    "name": "关联与通知",
+    "tables": [
+      "community_knowledge_links",
+      "user_notifications"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  },
+  {
+    "code": "C15",
+    "module": "科普社区",
+    "name": "社区管理统计",
+    "tables": [
+      "community_sections",
+      "community_post_profiles",
+      "community_reports"
+    ],
+    "status": "DESIGNED_NOT_IMPLEMENTED"
+  }
+]

@@ -1,0 +1,6309 @@
+{
+  "tables": [
+    {
+      "name": "sys_users",
+      "domain": "基础权限",
+      "description": "用户账户；禁用保留历史",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "username",
+          "definition": "VARCHAR(64) NOT NULL",
+          "comment": "登录名"
+        },
+        {
+          "name": "password_hash",
+          "definition": "VARCHAR(100) NOT NULL",
+          "comment": "BCrypt散列"
+        },
+        {
+          "name": "nickname",
+          "definition": "VARCHAR(80) NOT NULL",
+          "comment": "昵称"
+        },
+        {
+          "name": "avatar_path",
+          "definition": "VARCHAR(512) NULL",
+          "comment": "头像路径"
+        },
+        {
+          "name": "bio",
+          "definition": "VARCHAR(500) NULL",
+          "comment": "简介"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'",
+          "comment": "状态"
+        },
+        {
+          "name": "credential_version",
+          "definition": "INT NOT NULL DEFAULT 0",
+          "comment": "密码重置或禁用时递增"
+        },
+        {
+          "name": "last_login_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "最近登录"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "username"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "status IN ('ACTIVE','DISABLED')",
+        "credential_version >= 0"
+      ]
+    },
+    {
+      "name": "sys_roles",
+      "domain": "基础权限",
+      "description": "角色，不含游客",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "code",
+          "definition": "VARCHAR(32) NOT NULL",
+          "comment": "LEARNER/CONTRIBUTOR/REVIEWER/ADMIN"
+        },
+        {
+          "name": "name",
+          "definition": "VARCHAR(64) NOT NULL",
+          "comment": "名称"
+        },
+        {
+          "name": "description",
+          "definition": "VARCHAR(255) NULL",
+          "comment": "职责"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "code"
+        ]
+      ],
+      "indexes": [],
+      "checks": []
+    },
+    {
+      "name": "sys_permissions",
+      "domain": "基础权限",
+      "description": "接口权限",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "code",
+          "definition": "VARCHAR(80) NOT NULL",
+          "comment": "权限编码"
+        },
+        {
+          "name": "name",
+          "definition": "VARCHAR(100) NOT NULL",
+          "comment": "名称"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "code"
+        ]
+      ],
+      "indexes": [],
+      "checks": []
+    },
+    {
+      "name": "sys_user_roles",
+      "domain": "基础权限",
+      "description": "用户角色",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "role_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "角色"
+        },
+        {
+          "name": "granted_by",
+          "definition": "BIGINT NULL",
+          "comment": "授权人"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "role_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "role_id"
+        ],
+        [
+          "granted_by"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "sys_role_permissions",
+      "domain": "基础权限",
+      "description": "角色权限",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "role_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "角色"
+        },
+        {
+          "name": "permission_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "权限"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "role_id",
+          "permission_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "permission_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "sys_role_applications",
+      "domain": "基础权限",
+      "description": "贡献资格申请",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "申请人"
+        },
+        {
+          "name": "role_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "接口仅允许CONTRIBUTOR"
+        },
+        {
+          "name": "statement",
+          "definition": "TEXT NOT NULL",
+          "comment": "说明"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'PENDING'",
+          "comment": "状态"
+        },
+        {
+          "name": "reviewer_id",
+          "definition": "BIGINT NULL",
+          "comment": "处理人"
+        },
+        {
+          "name": "review_note",
+          "definition": "TEXT NULL",
+          "comment": "意见"
+        },
+        {
+          "name": "reviewed_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "处理时间"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [],
+      "indexes": [
+        [
+          "status",
+          "created_at"
+        ],
+        [
+          "user_id",
+          "created_at"
+        ],
+        [
+          "role_id"
+        ],
+        [
+          "reviewer_id"
+        ]
+      ],
+      "checks": [
+        "status IN ('PENDING','APPROVED','REJECTED','WITHDRAWN')",
+        "reviewer_id IS NULL OR reviewer_id <> user_id"
+      ]
+    },
+    {
+      "name": "auth_refresh_tokens",
+      "domain": "基础权限",
+      "description": "刷新令牌轮换撤销",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "token_hash",
+          "definition": "CHAR(64) NOT NULL",
+          "comment": "令牌SHA256，不存原文"
+        },
+        {
+          "name": "family_key",
+          "definition": "CHAR(36) NOT NULL",
+          "comment": "登录轮换链"
+        },
+        {
+          "name": "expires_at",
+          "definition": "DATETIME(3) NOT NULL",
+          "comment": "到期"
+        },
+        {
+          "name": "revoked_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "撤销"
+        },
+        {
+          "name": "replaced_by_id",
+          "definition": "BIGINT NULL",
+          "comment": "后继令牌"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "token_hash"
+        ]
+      ],
+      "indexes": [
+        [
+          "user_id",
+          "expires_at"
+        ],
+        [
+          "family_key"
+        ],
+        [
+          "replaced_by_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "file_objects",
+      "domain": "公共资源",
+      "description": "文件与完全去重",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "sha256",
+          "definition": "CHAR(64) NOT NULL",
+          "comment": "内容哈希"
+        },
+        {
+          "name": "storage_key",
+          "definition": "VARCHAR(512) NOT NULL",
+          "comment": "根目录内相对键"
+        },
+        {
+          "name": "original_name",
+          "definition": "VARCHAR(255) NOT NULL",
+          "comment": "原名"
+        },
+        {
+          "name": "mime_type",
+          "definition": "VARCHAR(100) NOT NULL",
+          "comment": "类型"
+        },
+        {
+          "name": "byte_size",
+          "definition": "BIGINT NOT NULL",
+          "comment": "字节数"
+        },
+        {
+          "name": "uploaded_by",
+          "definition": "BIGINT NOT NULL",
+          "comment": "上传人"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "sha256"
+        ]
+      ],
+      "indexes": [
+        [
+          "uploaded_by"
+        ]
+      ],
+      "checks": [
+        "byte_size > 0"
+      ]
+    },
+    {
+      "name": "content_categories",
+      "domain": "公共资源",
+      "description": "分类",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "parent_id",
+          "definition": "BIGINT NULL",
+          "comment": "父分类"
+        },
+        {
+          "name": "code",
+          "definition": "VARCHAR(64) NOT NULL",
+          "comment": "编码"
+        },
+        {
+          "name": "name",
+          "definition": "VARCHAR(80) NOT NULL",
+          "comment": "名称"
+        },
+        {
+          "name": "scope",
+          "definition": "VARCHAR(24) NOT NULL",
+          "comment": "KNOWLEDGE/LEARNING/COMMUNITY"
+        },
+        {
+          "name": "sort_order",
+          "definition": "INT NOT NULL DEFAULT 0",
+          "comment": "排序"
+        },
+        {
+          "name": "active",
+          "definition": "TINYINT NOT NULL DEFAULT 1",
+          "comment": "启用"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "code"
+        ]
+      ],
+      "indexes": [
+        [
+          "scope",
+          "parent_id",
+          "sort_order"
+        ],
+        [
+          "parent_id"
+        ]
+      ],
+      "checks": [
+        "active IN (0,1)",
+        "scope IN ('KNOWLEDGE','LEARNING','COMMUNITY')"
+      ]
+    },
+    {
+      "name": "content_tags",
+      "domain": "公共资源",
+      "description": "标签",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "name",
+          "definition": "VARCHAR(64) NOT NULL",
+          "comment": "名称"
+        },
+        {
+          "name": "active",
+          "definition": "TINYINT NOT NULL DEFAULT 1",
+          "comment": "启用"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "name"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "active IN (0,1)"
+      ]
+    },
+    {
+      "name": "content_resources",
+      "domain": "公共资源",
+      "description": "内容身份与可见性",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "resource_type",
+          "definition": "VARCHAR(24) NOT NULL",
+          "comment": "资源类型"
+        },
+        {
+          "name": "owner_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "负责用户"
+        },
+        {
+          "name": "visibility_status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'DRAFT'",
+          "comment": "可见状态"
+        },
+        {
+          "name": "published_revision_id",
+          "definition": "BIGINT NULL",
+          "comment": "当前正式版本"
+        },
+        {
+          "name": "lock_version",
+          "definition": "INT NOT NULL DEFAULT 0",
+          "comment": "乐观锁"
+        },
+        {
+          "name": "published_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "首次公开时间"
+        },
+        {
+          "name": "suspended_reason",
+          "definition": "VARCHAR(1000) NULL",
+          "comment": "停用说明"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [],
+      "indexes": [
+        [
+          "resource_type",
+          "visibility_status",
+          "published_at"
+        ],
+        [
+          "owner_id",
+          "created_at"
+        ],
+        [
+          "id",
+          "published_revision_id"
+        ]
+      ],
+      "checks": [
+        "resource_type IN ('KNOWLEDGE','TOPIC','CARD','QUESTION','POST','ARTICLE')",
+        "visibility_status IN ('DRAFT','PUBLISHED','SUSPENDED','ARCHIVED')",
+        "visibility_status <> 'PUBLISHED' OR published_revision_id IS NOT NULL",
+        "lock_version >= 0"
+      ]
+    },
+    {
+      "name": "content_revisions",
+      "domain": "公共资源",
+      "description": "提交后冻结的内容版本",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "内容身份"
+        },
+        {
+          "name": "version_no",
+          "definition": "INT NOT NULL",
+          "comment": "版本号"
+        },
+        {
+          "name": "base_revision_id",
+          "definition": "BIGINT NULL",
+          "comment": "修订依据版本"
+        },
+        {
+          "name": "category_id",
+          "definition": "BIGINT NULL",
+          "comment": "分类"
+        },
+        {
+          "name": "title",
+          "definition": "VARCHAR(255) NOT NULL",
+          "comment": "标题"
+        },
+        {
+          "name": "body",
+          "definition": "LONGTEXT NOT NULL",
+          "comment": "受控Markdown正文"
+        },
+        {
+          "name": "revision_state",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'DRAFT'",
+          "comment": "审核状态"
+        },
+        {
+          "name": "change_note",
+          "definition": "VARCHAR(1000) NULL",
+          "comment": "修改说明"
+        },
+        {
+          "name": "created_by",
+          "definition": "BIGINT NOT NULL",
+          "comment": "编辑人"
+        },
+        {
+          "name": "submitted_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "提交时间"
+        },
+        {
+          "name": "approved_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "通过时间"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "resource_id",
+          "version_no"
+        ],
+        [
+          "resource_id",
+          "id"
+        ]
+      ],
+      "indexes": [
+        [
+          "revision_state",
+          "created_at"
+        ],
+        [
+          "category_id"
+        ],
+        [
+          "created_by"
+        ],
+        [
+          "resource_id",
+          "base_revision_id"
+        ]
+      ],
+      "checks": [
+        "version_no > 0",
+        "revision_state IN ('DRAFT','IN_REVIEW','APPROVED','REJECTED','WITHDRAWN')"
+      ]
+    },
+    {
+      "name": "revision_tags",
+      "domain": "公共资源",
+      "description": "版本标签",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "版本"
+        },
+        {
+          "name": "tag_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "标签"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "revision_id",
+          "tag_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "tag_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "resource_bookmarks",
+      "domain": "公共资源",
+      "description": "统一收藏",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "内容"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "user_id",
+          "created_at"
+        ],
+        [
+          "resource_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "resource_likes",
+      "domain": "公共资源",
+      "description": "点赞关联",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "内容"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "user_id",
+          "created_at"
+        ],
+        [
+          "resource_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "user_resource_history",
+      "domain": "公共资源",
+      "description": "最近浏览聚合，可重建",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "资源"
+        },
+        {
+          "name": "last_viewed_at",
+          "definition": "DATETIME(3) NOT NULL",
+          "comment": "最近访问"
+        },
+        {
+          "name": "view_count",
+          "definition": "INT NOT NULL DEFAULT 1",
+          "comment": "有效次数"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "user_id",
+          "last_viewed_at"
+        ],
+        [
+          "resource_id"
+        ]
+      ],
+      "checks": [
+        "view_count > 0"
+      ]
+    },
+    {
+      "name": "resource_feedback",
+      "domain": "公共资源",
+      "description": "纠错与知识需求",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "反馈人"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NULL",
+          "comment": "资源"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NULL",
+          "comment": "当时版本"
+        },
+        {
+          "name": "kind",
+          "definition": "VARCHAR(24) NOT NULL",
+          "comment": "反馈类型"
+        },
+        {
+          "name": "content",
+          "definition": "TEXT NOT NULL",
+          "comment": "内容"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'OPEN'",
+          "comment": "处理状态"
+        },
+        {
+          "name": "handler_id",
+          "definition": "BIGINT NULL",
+          "comment": "处理人"
+        },
+        {
+          "name": "resolution",
+          "definition": "TEXT NULL",
+          "comment": "结果"
+        },
+        {
+          "name": "resolved_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "处理时间"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [],
+      "indexes": [
+        [
+          "status",
+          "created_at"
+        ],
+        [
+          "user_id",
+          "created_at"
+        ],
+        [
+          "resource_id"
+        ],
+        [
+          "handler_id"
+        ],
+        [
+          "resource_id",
+          "revision_id"
+        ]
+      ],
+      "checks": [
+        "kind IN ('CORRECTION','KNOWLEDGE_REQUEST')",
+        "status IN ('OPEN','PROCESSING','RESOLVED','REJECTED')",
+        "revision_id IS NULL OR resource_id IS NOT NULL"
+      ]
+    },
+    {
+      "name": "user_notifications",
+      "domain": "公共资源",
+      "description": "站内通知",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "接收者"
+        },
+        {
+          "name": "event_key",
+          "definition": "VARCHAR(120) NOT NULL",
+          "comment": "幂等事件键"
+        },
+        {
+          "name": "kind",
+          "definition": "VARCHAR(40) NOT NULL",
+          "comment": "通知类型"
+        },
+        {
+          "name": "title",
+          "definition": "VARCHAR(160) NOT NULL",
+          "comment": "标题"
+        },
+        {
+          "name": "body",
+          "definition": "TEXT NOT NULL",
+          "comment": "消息"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NULL",
+          "comment": "资源"
+        },
+        {
+          "name": "relative_path",
+          "definition": "VARCHAR(512) NULL",
+          "comment": "站内路径"
+        },
+        {
+          "name": "read_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "已读时间"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "event_key"
+        ]
+      ],
+      "indexes": [
+        [
+          "user_id",
+          "read_at",
+          "created_at"
+        ],
+        [
+          "resource_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "sys_audit_logs",
+      "domain": "公共资源",
+      "description": "追加审计，不存密码密钥",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "actor_id",
+          "definition": "BIGINT NULL",
+          "comment": "操作者"
+        },
+        {
+          "name": "trace_id",
+          "definition": "VARCHAR(64) NOT NULL",
+          "comment": "追踪号"
+        },
+        {
+          "name": "action",
+          "definition": "VARCHAR(80) NOT NULL",
+          "comment": "动作"
+        },
+        {
+          "name": "object_type",
+          "definition": "VARCHAR(64) NOT NULL",
+          "comment": "对象类型"
+        },
+        {
+          "name": "object_key",
+          "definition": "VARCHAR(100) NOT NULL",
+          "comment": "历史对象键"
+        },
+        {
+          "name": "summary",
+          "definition": "JSON NULL",
+          "comment": "脱敏摘要"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [],
+      "indexes": [
+        [
+          "object_type",
+          "object_key",
+          "created_at"
+        ],
+        [
+          "actor_id",
+          "created_at"
+        ],
+        [
+          "trace_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "source_documents",
+      "domain": "知识加工",
+      "description": "来源资料，提交后冻结元信息，新修订另建记录",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "file_id",
+          "definition": "BIGINT NULL",
+          "comment": "文件"
+        },
+        {
+          "name": "origin_revision_id",
+          "definition": "BIGINT NULL",
+          "comment": "社区文章版本"
+        },
+        {
+          "name": "parent_document_id",
+          "definition": "BIGINT NULL",
+          "comment": "上一资料版本"
+        },
+        {
+          "name": "title",
+          "definition": "VARCHAR(255) NOT NULL",
+          "comment": "标题"
+        },
+        {
+          "name": "source_type",
+          "definition": "VARCHAR(24) NOT NULL",
+          "comment": "来源类型"
+        },
+        {
+          "name": "author",
+          "definition": "VARCHAR(255) NULL",
+          "comment": "作者"
+        },
+        {
+          "name": "publisher",
+          "definition": "VARCHAR(255) NULL",
+          "comment": "出版机构"
+        },
+        {
+          "name": "publication_year",
+          "definition": "SMALLINT NULL",
+          "comment": "出版年"
+        },
+        {
+          "name": "source_url",
+          "definition": "VARCHAR(1500) NULL",
+          "comment": "来源链接"
+        },
+        {
+          "name": "bibliographic_note",
+          "definition": "TEXT NULL",
+          "comment": "书目信息"
+        },
+        {
+          "name": "submitted_by",
+          "definition": "BIGINT NOT NULL",
+          "comment": "提交人"
+        },
+        {
+          "name": "review_state",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'DRAFT'",
+          "comment": "审核状态"
+        },
+        {
+          "name": "availability",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'",
+          "comment": "可用状态"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [],
+      "indexes": [
+        [
+          "review_state",
+          "created_at"
+        ],
+        [
+          "submitted_by",
+          "created_at"
+        ],
+        [
+          "file_id"
+        ],
+        [
+          "origin_revision_id"
+        ],
+        [
+          "parent_document_id"
+        ]
+      ],
+      "checks": [
+        "source_type IN ('BOOK','PAPER','WEB','COMMUNITY','OTHER')",
+        "review_state IN ('DRAFT','IN_REVIEW','APPROVED','REJECTED','WITHDRAWN')",
+        "availability IN ('ACTIVE','SUSPENDED')",
+        "file_id IS NOT NULL OR origin_revision_id IS NOT NULL OR source_url IS NOT NULL"
+      ]
+    },
+    {
+      "name": "document_parse_runs",
+      "domain": "知识加工",
+      "description": "版本化解析批次",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "document_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "资料"
+        },
+        {
+          "name": "parse_version",
+          "definition": "INT NOT NULL",
+          "comment": "解析序号"
+        },
+        {
+          "name": "parser_name",
+          "definition": "VARCHAR(80) NOT NULL",
+          "comment": "解析器版本"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'QUEUED'",
+          "comment": "解析状态"
+        },
+        {
+          "name": "error_code",
+          "definition": "VARCHAR(80) NULL",
+          "comment": "失败类型"
+        },
+        {
+          "name": "error_message",
+          "definition": "VARCHAR(1000) NULL",
+          "comment": "脱敏摘要"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "document_id",
+          "parse_version"
+        ],
+        [
+          "document_id",
+          "id"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "parse_version > 0",
+        "status IN ('QUEUED','RUNNING','SUCCEEDED','FAILED')"
+      ]
+    },
+    {
+      "name": "document_segments",
+      "domain": "知识加工",
+      "description": "不可变原文段落",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "document_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "资料"
+        },
+        {
+          "name": "parse_run_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "解析批次"
+        },
+        {
+          "name": "segment_no",
+          "definition": "INT NOT NULL",
+          "comment": "段落号"
+        },
+        {
+          "name": "heading_path",
+          "definition": "VARCHAR(500) NULL",
+          "comment": "章节"
+        },
+        {
+          "name": "page_label",
+          "definition": "VARCHAR(80) NULL",
+          "comment": "页码位置"
+        },
+        {
+          "name": "body",
+          "definition": "LONGTEXT NOT NULL",
+          "comment": "原文"
+        },
+        {
+          "name": "content_hash",
+          "definition": "CHAR(64) NOT NULL",
+          "comment": "文本哈希"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "parse_run_id",
+          "segment_no"
+        ],
+        [
+          "document_id",
+          "id"
+        ]
+      ],
+      "indexes": [
+        [
+          "document_id",
+          "parse_run_id"
+        ]
+      ],
+      "checks": [
+        "segment_no > 0"
+      ]
+    },
+    {
+      "name": "revision_evidence",
+      "domain": "知识加工",
+      "description": "内容版本来源依据",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "被支撑版本"
+        },
+        {
+          "name": "document_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "资料"
+        },
+        {
+          "name": "segment_id",
+          "definition": "BIGINT NULL",
+          "comment": "原文段落"
+        },
+        {
+          "name": "location_label",
+          "definition": "VARCHAR(255) NULL",
+          "comment": "人工定位"
+        },
+        {
+          "name": "quote_text",
+          "definition": "TEXT NOT NULL",
+          "comment": "支持片段"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "revision_id",
+          "id"
+        ]
+      ],
+      "indexes": [
+        [
+          "document_id"
+        ],
+        [
+          "document_id",
+          "segment_id"
+        ]
+      ],
+      "checks": [
+        "segment_id IS NOT NULL OR location_label IS NOT NULL"
+      ]
+    },
+    {
+      "name": "review_tasks",
+      "domain": "知识加工",
+      "description": "统一审核，一份冻结提交一个任务",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NULL",
+          "comment": "版本"
+        },
+        {
+          "name": "document_id",
+          "definition": "BIGINT NULL",
+          "comment": "资料"
+        },
+        {
+          "name": "submitted_by",
+          "definition": "BIGINT NOT NULL",
+          "comment": "提交人"
+        },
+        {
+          "name": "reviewer_id",
+          "definition": "BIGINT NULL",
+          "comment": "审核人"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'PENDING'",
+          "comment": "任务状态"
+        },
+        {
+          "name": "review_note",
+          "definition": "TEXT NULL",
+          "comment": "意见"
+        },
+        {
+          "name": "reviewed_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "处理时间"
+        },
+        {
+          "name": "lock_version",
+          "definition": "INT NOT NULL DEFAULT 0",
+          "comment": "乐观锁"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "revision_id"
+        ],
+        [
+          "document_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "status",
+          "created_at"
+        ],
+        [
+          "reviewer_id",
+          "status"
+        ],
+        [
+          "submitted_by"
+        ]
+      ],
+      "checks": [
+        "(revision_id IS NOT NULL) + (document_id IS NOT NULL) = 1",
+        "reviewer_id IS NULL OR reviewer_id <> submitted_by",
+        "status IN ('PENDING','APPROVED','REJECTED','WITHDRAWN')",
+        "status NOT IN ('APPROVED','REJECTED') OR (reviewer_id IS NOT NULL AND reviewed_at IS NOT NULL AND review_note IS NOT NULL)"
+      ]
+    },
+    {
+      "name": "review_events",
+      "domain": "知识加工",
+      "description": "审核操作历史",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "review_task_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "任务"
+        },
+        {
+          "name": "actor_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "操作者"
+        },
+        {
+          "name": "action",
+          "definition": "VARCHAR(24) NOT NULL",
+          "comment": "审核动作"
+        },
+        {
+          "name": "note",
+          "definition": "TEXT NULL",
+          "comment": "意见"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [],
+      "indexes": [
+        [
+          "review_task_id",
+          "created_at"
+        ],
+        [
+          "actor_id"
+        ]
+      ],
+      "checks": [
+        "action IN ('CLAIM','APPROVE','REJECT','WITHDRAW')"
+      ]
+    },
+    {
+      "name": "async_jobs",
+      "domain": "公共资源",
+      "description": "事务内outbox与异步任务",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "job_type",
+          "definition": "VARCHAR(40) NOT NULL",
+          "comment": "PARSE/EXTRACT/VECTOR_INDEX/GRAPH_SYNC/REMOVE_INDEX/PROFILE_REFRESH/BACKUP"
+        },
+        {
+          "name": "idempotency_key",
+          "definition": "VARCHAR(191) NOT NULL",
+          "comment": "动作对象版本配置的幂等键"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NULL",
+          "comment": "版本目标"
+        },
+        {
+          "name": "document_id",
+          "definition": "BIGINT NULL",
+          "comment": "资料目标"
+        },
+        {
+          "name": "payload",
+          "definition": "JSON NULL",
+          "comment": "索引代次等执行参数"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'QUEUED'",
+          "comment": "任务状态"
+        },
+        {
+          "name": "attempt_count",
+          "definition": "INT NOT NULL DEFAULT 0",
+          "comment": "尝试次数"
+        },
+        {
+          "name": "max_attempts",
+          "definition": "INT NOT NULL DEFAULT 3",
+          "comment": "最大次数"
+        },
+        {
+          "name": "available_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "最早执行"
+        },
+        {
+          "name": "lease_until",
+          "definition": "DATETIME(3) NULL",
+          "comment": "租约截止"
+        },
+        {
+          "name": "run_token",
+          "definition": "CHAR(36) NULL",
+          "comment": "本次领取令牌"
+        },
+        {
+          "name": "last_error",
+          "definition": "VARCHAR(1000) NULL",
+          "comment": "脱敏错误"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "idempotency_key"
+        ]
+      ],
+      "indexes": [
+        [
+          "status",
+          "available_at",
+          "id"
+        ],
+        [
+          "lease_until"
+        ],
+        [
+          "revision_id"
+        ],
+        [
+          "document_id"
+        ]
+      ],
+      "checks": [
+        "status IN ('QUEUED','RUNNING','RETRY_WAIT','SUCCEEDED','DEAD','CANCELLED')",
+        "attempt_count >= 0 AND max_attempts > 0"
+      ]
+    },
+    {
+      "name": "async_job_attempts",
+      "domain": "公共资源",
+      "description": "任务执行历史",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "job_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "任务"
+        },
+        {
+          "name": "attempt_no",
+          "definition": "INT NOT NULL",
+          "comment": "尝试序号"
+        },
+        {
+          "name": "run_token",
+          "definition": "CHAR(36) NOT NULL",
+          "comment": "领取令牌"
+        },
+        {
+          "name": "started_at",
+          "definition": "DATETIME(3) NOT NULL",
+          "comment": "开始"
+        },
+        {
+          "name": "finished_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "结束"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL",
+          "comment": "执行状态"
+        },
+        {
+          "name": "error_message",
+          "definition": "VARCHAR(1000) NULL",
+          "comment": "脱敏错误"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "job_id",
+          "attempt_no"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "attempt_no > 0",
+        "status IN ('RUNNING','SUCCEEDED','FAILED','EXPIRED')"
+      ]
+    },
+    {
+      "name": "knowledge_entries",
+      "domain": "知识中心",
+      "description": "知识身份与规范名称",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "知识资源"
+        },
+        {
+          "name": "knowledge_type",
+          "definition": "VARCHAR(24) NOT NULL",
+          "comment": "知识类别"
+        },
+        {
+          "name": "canonical_name",
+          "definition": "VARCHAR(160) NOT NULL",
+          "comment": "规范名称"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "resource_id"
+        ],
+        [
+          "knowledge_type",
+          "canonical_name"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "knowledge_type IN ('CONCEPT','HERB','FORMULA','EFFECT','SYMPTOM','MERIDIAN')"
+      ]
+    },
+    {
+      "name": "knowledge_aliases",
+      "domain": "知识中心",
+      "description": "名称别名索引",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "knowledge_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "知识"
+        },
+        {
+          "name": "alias",
+          "definition": "VARCHAR(160) NOT NULL",
+          "comment": "别名"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "knowledge_resource_id",
+          "alias"
+        ]
+      ],
+      "indexes": [
+        [
+          "alias"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "herb_profiles",
+      "domain": "知识中心",
+      "description": "药材版本属性",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "版本"
+        },
+        {
+          "name": "nature",
+          "definition": "VARCHAR(160) NULL",
+          "comment": "性"
+        },
+        {
+          "name": "flavor",
+          "definition": "VARCHAR(160) NULL",
+          "comment": "味"
+        },
+        {
+          "name": "origin_note",
+          "definition": "TEXT NULL",
+          "comment": "来源说明"
+        },
+        {
+          "name": "precautions",
+          "definition": "TEXT NULL",
+          "comment": "注意事项"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "revision_id"
+        ]
+      ],
+      "indexes": [],
+      "checks": []
+    },
+    {
+      "name": "formula_profiles",
+      "domain": "知识中心",
+      "description": "方剂版本属性",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "版本"
+        },
+        {
+          "name": "origin_text",
+          "definition": "VARCHAR(500) NOT NULL",
+          "comment": "出处"
+        },
+        {
+          "name": "function_summary",
+          "definition": "TEXT NULL",
+          "comment": "功效说明"
+        },
+        {
+          "name": "indication_summary",
+          "definition": "TEXT NULL",
+          "comment": "主治知识说明"
+        },
+        {
+          "name": "precautions",
+          "definition": "TEXT NULL",
+          "comment": "注意事项"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "revision_id"
+        ]
+      ],
+      "indexes": [],
+      "checks": []
+    },
+    {
+      "name": "formula_ingredients",
+      "domain": "知识中心",
+      "description": "有依据的方剂版本组成",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "formula_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "方剂"
+        },
+        {
+          "name": "formula_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "方剂版本"
+        },
+        {
+          "name": "herb_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "药材"
+        },
+        {
+          "name": "herb_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "药材依据版本"
+        },
+        {
+          "name": "role",
+          "definition": "VARCHAR(16) NOT NULL DEFAULT 'UNSPECIFIED'",
+          "comment": "组成角色"
+        },
+        {
+          "name": "dose_value",
+          "definition": "DECIMAL(12,4) NULL",
+          "comment": "资料数值，仅学习辅助"
+        },
+        {
+          "name": "dose_unit",
+          "definition": "VARCHAR(32) NULL",
+          "comment": "保留原单位"
+        },
+        {
+          "name": "dose_text",
+          "definition": "VARCHAR(160) NULL",
+          "comment": "原文剂量"
+        },
+        {
+          "name": "sort_order",
+          "definition": "INT NOT NULL DEFAULT 0",
+          "comment": "顺序"
+        },
+        {
+          "name": "evidence_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "方剂版本依据"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "formula_revision_id",
+          "herb_resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "formula_resource_id"
+        ],
+        [
+          "herb_resource_id"
+        ],
+        [
+          "formula_resource_id",
+          "formula_revision_id"
+        ],
+        [
+          "herb_resource_id",
+          "herb_revision_id"
+        ],
+        [
+          "formula_revision_id",
+          "evidence_id"
+        ]
+      ],
+      "checks": [
+        "role IN ('JUN','CHEN','ZUO','SHI','UNSPECIFIED')",
+        "dose_value IS NULL OR dose_value > 0"
+      ]
+    },
+    {
+      "name": "knowledge_relations",
+      "domain": "知识中心",
+      "description": "有依据的知识关系事实",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "source_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "起点"
+        },
+        {
+          "name": "source_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "起点版本"
+        },
+        {
+          "name": "target_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "终点"
+        },
+        {
+          "name": "target_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "终点版本"
+        },
+        {
+          "name": "relation_type",
+          "definition": "VARCHAR(32) NOT NULL",
+          "comment": "关系类型"
+        },
+        {
+          "name": "explanation",
+          "definition": "TEXT NULL",
+          "comment": "说明"
+        },
+        {
+          "name": "evidence_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "起点版本依据"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "source_revision_id",
+          "target_resource_id",
+          "relation_type"
+        ]
+      ],
+      "indexes": [
+        [
+          "source_resource_id"
+        ],
+        [
+          "target_resource_id"
+        ],
+        [
+          "source_resource_id",
+          "source_revision_id"
+        ],
+        [
+          "target_resource_id",
+          "target_revision_id"
+        ],
+        [
+          "source_revision_id",
+          "evidence_id"
+        ]
+      ],
+      "checks": [
+        "relation_type IN ('HAS_EFFECT','INDICATED_FOR','ENTERS_MERIDIAN','COMPATIBLE_WITH','RELATED_TO')",
+        "source_resource_id <> target_resource_id"
+      ]
+    },
+    {
+      "name": "learning_topics",
+      "domain": "学习测验",
+      "description": "专题身份",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "TOPIC资源"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "resource_id"
+        ]
+      ],
+      "indexes": [],
+      "checks": []
+    },
+    {
+      "name": "topic_profiles",
+      "domain": "学习测验",
+      "description": "专题版本属性",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "版本"
+        },
+        {
+          "name": "objectives",
+          "definition": "TEXT NOT NULL",
+          "comment": "学习目标"
+        },
+        {
+          "name": "prerequisites",
+          "definition": "TEXT NULL",
+          "comment": "所需基础"
+        },
+        {
+          "name": "level",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'BEGINNER'",
+          "comment": "基础级别"
+        },
+        {
+          "name": "estimated_minutes",
+          "definition": "INT NULL",
+          "comment": "建议时长"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "revision_id"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "level IN ('BEGINNER','INTERMEDIATE')",
+        "estimated_minutes IS NULL OR estimated_minutes > 0"
+      ]
+    },
+    {
+      "name": "learning_cards",
+      "domain": "学习测验",
+      "description": "卡片身份",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "CARD资源"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "resource_id"
+        ]
+      ],
+      "indexes": [],
+      "checks": []
+    },
+    {
+      "name": "topic_cards",
+      "domain": "学习测验",
+      "description": "专题版本目录，固定卡片版本",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "topic_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "专题版本"
+        },
+        {
+          "name": "card_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "卡片"
+        },
+        {
+          "name": "card_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "卡片版本"
+        },
+        {
+          "name": "position",
+          "definition": "INT NOT NULL",
+          "comment": "目录位置"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "topic_revision_id",
+          "position"
+        ],
+        [
+          "topic_revision_id",
+          "card_resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "card_resource_id"
+        ],
+        [
+          "card_resource_id",
+          "card_revision_id"
+        ]
+      ],
+      "checks": [
+        "position > 0"
+      ]
+    },
+    {
+      "name": "card_knowledge_links",
+      "domain": "学习测验",
+      "description": "卡片版本关联知识",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "card_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "卡片版本"
+        },
+        {
+          "name": "knowledge_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "知识"
+        },
+        {
+          "name": "knowledge_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "依据版本"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "card_revision_id",
+          "knowledge_resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "knowledge_resource_id"
+        ],
+        [
+          "knowledge_resource_id",
+          "knowledge_revision_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "question_profiles",
+      "domain": "学习测验",
+      "description": "题目版本私有属性，禁止直接返回作答API",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "题目版本，题干在正文"
+        },
+        {
+          "name": "question_type",
+          "definition": "VARCHAR(20) NOT NULL",
+          "comment": "类型"
+        },
+        {
+          "name": "difficulty",
+          "definition": "VARCHAR(16) NOT NULL DEFAULT 'EASY'",
+          "comment": "难度"
+        },
+        {
+          "name": "explanation",
+          "definition": "TEXT NOT NULL",
+          "comment": "提交后展示的解析"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "revision_id"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "question_type IN ('SINGLE','MULTIPLE','TRUE_FALSE')",
+        "difficulty IN ('EASY','MEDIUM','HARD')"
+      ]
+    },
+    {
+      "name": "question_options",
+      "domain": "学习测验",
+      "description": "题目版本选项与服务端答案",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "question_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "题目版本"
+        },
+        {
+          "name": "option_key",
+          "definition": "VARCHAR(8) NOT NULL",
+          "comment": "稳定选项键"
+        },
+        {
+          "name": "option_text",
+          "definition": "TEXT NOT NULL",
+          "comment": "内容"
+        },
+        {
+          "name": "is_correct",
+          "definition": "TINYINT NOT NULL",
+          "comment": "标准答案"
+        },
+        {
+          "name": "position",
+          "definition": "INT NOT NULL",
+          "comment": "顺序"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "question_revision_id",
+          "option_key"
+        ],
+        [
+          "question_revision_id",
+          "position"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "is_correct IN (0,1)",
+        "position > 0"
+      ]
+    },
+    {
+      "name": "question_knowledge_links",
+      "domain": "学习测验",
+      "description": "题目考查知识",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "question_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "题目版本"
+        },
+        {
+          "name": "knowledge_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "知识"
+        },
+        {
+          "name": "knowledge_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "知识版本"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "question_revision_id",
+          "knowledge_resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "knowledge_resource_id"
+        ],
+        [
+          "knowledge_resource_id",
+          "knowledge_revision_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "learning_assessments",
+      "domain": "学习测验",
+      "description": "测验模板版本，启用后固定题目",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "anchor_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "关联专题或卡片"
+        },
+        {
+          "name": "assessment_type",
+          "definition": "VARCHAR(20) NOT NULL",
+          "comment": "测验类型"
+        },
+        {
+          "name": "version_no",
+          "definition": "INT NOT NULL",
+          "comment": "版本号"
+        },
+        {
+          "name": "title",
+          "definition": "VARCHAR(255) NOT NULL",
+          "comment": "名称"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'DRAFT'",
+          "comment": "状态"
+        },
+        {
+          "name": "pass_score",
+          "definition": "DECIMAL(8,2) NULL",
+          "comment": "达标分数"
+        },
+        {
+          "name": "created_by",
+          "definition": "BIGINT NOT NULL",
+          "comment": "创建人"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "anchor_resource_id",
+          "assessment_type",
+          "version_no"
+        ]
+      ],
+      "indexes": [
+        [
+          "created_by"
+        ]
+      ],
+      "checks": [
+        "assessment_type IN ('PLACEMENT','CARD','TOPIC')",
+        "status IN ('DRAFT','ACTIVE','RETIRED')",
+        "version_no > 0",
+        "pass_score IS NULL OR pass_score >= 0"
+      ]
+    },
+    {
+      "name": "assessment_questions",
+      "domain": "学习测验",
+      "description": "模板题目固定版本",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "assessment_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "测验"
+        },
+        {
+          "name": "question_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "题目"
+        },
+        {
+          "name": "question_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "题目版本"
+        },
+        {
+          "name": "position",
+          "definition": "INT NOT NULL",
+          "comment": "顺序"
+        },
+        {
+          "name": "points",
+          "definition": "DECIMAL(8,2) NOT NULL",
+          "comment": "分数"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "assessment_id",
+          "position"
+        ],
+        [
+          "assessment_id",
+          "question_resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "question_revision_id"
+        ],
+        [
+          "question_resource_id",
+          "question_revision_id"
+        ]
+      ],
+      "checks": [
+        "position > 0",
+        "points > 0"
+      ]
+    },
+    {
+      "name": "user_enrollments",
+      "domain": "学习测验",
+      "description": "专题学习，固定目录版本",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "topic_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "专题"
+        },
+        {
+          "name": "topic_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "专题版本"
+        },
+        {
+          "name": "last_card_resource_id",
+          "definition": "BIGINT NULL",
+          "comment": "最近卡片"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'LEARNING'",
+          "comment": "状态"
+        },
+        {
+          "name": "completed_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "完成时间"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "topic_resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "user_id",
+          "updated_at"
+        ],
+        [
+          "topic_resource_id"
+        ],
+        [
+          "last_card_resource_id"
+        ],
+        [
+          "topic_resource_id",
+          "topic_revision_id"
+        ]
+      ],
+      "checks": [
+        "status IN ('LEARNING','COMPLETED','ARCHIVED')"
+      ]
+    },
+    {
+      "name": "user_card_progress",
+      "domain": "学习测验",
+      "description": "明确完成标记，与测验成绩独立",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "enrollment_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "学习记录"
+        },
+        {
+          "name": "card_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "卡片"
+        },
+        {
+          "name": "card_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "实际学习版本"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'STARTED'",
+          "comment": "状态"
+        },
+        {
+          "name": "completed_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "明确完成时间"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "enrollment_id",
+          "card_resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "card_resource_id"
+        ],
+        [
+          "card_resource_id",
+          "card_revision_id"
+        ]
+      ],
+      "checks": [
+        "status IN ('STARTED','COMPLETED')",
+        "status <> 'COMPLETED' OR completed_at IS NOT NULL"
+      ]
+    },
+    {
+      "name": "quiz_attempts",
+      "domain": "学习测验",
+      "description": "一次作答，交卷事务评分",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "assessment_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "模板"
+        },
+        {
+          "name": "enrollment_id",
+          "definition": "BIGINT NULL",
+          "comment": "专题记录"
+        },
+        {
+          "name": "request_key",
+          "definition": "CHAR(36) NOT NULL",
+          "comment": "开始作答幂等键"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS'",
+          "comment": "状态"
+        },
+        {
+          "name": "total_points",
+          "definition": "DECIMAL(10,2) NOT NULL DEFAULT 0",
+          "comment": "总分"
+        },
+        {
+          "name": "earned_points",
+          "definition": "DECIMAL(10,2) NULL",
+          "comment": "得分"
+        },
+        {
+          "name": "submitted_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "交卷时间"
+        },
+        {
+          "name": "lock_version",
+          "definition": "INT NOT NULL DEFAULT 0",
+          "comment": "并发控制"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "request_key"
+        ]
+      ],
+      "indexes": [
+        [
+          "user_id",
+          "status",
+          "created_at"
+        ],
+        [
+          "assessment_id",
+          "created_at"
+        ],
+        [
+          "enrollment_id"
+        ]
+      ],
+      "checks": [
+        "status IN ('IN_PROGRESS','SUBMITTED','ABANDONED')",
+        "total_points >= 0",
+        "earned_points IS NULL OR (earned_points >= 0 AND earned_points <= total_points)",
+        "status <> 'SUBMITTED' OR (submitted_at IS NOT NULL AND earned_points IS NOT NULL)"
+      ]
+    },
+    {
+      "name": "quiz_attempt_items",
+      "domain": "学习测验",
+      "description": "题干选项及私有答案快照",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "attempt_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "试卷"
+        },
+        {
+          "name": "question_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "题目"
+        },
+        {
+          "name": "question_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "题目版本"
+        },
+        {
+          "name": "position",
+          "definition": "INT NOT NULL",
+          "comment": "顺序"
+        },
+        {
+          "name": "question_snapshot",
+          "definition": "JSON NOT NULL",
+          "comment": "公开题干选项快照"
+        },
+        {
+          "name": "answer_key_snapshot",
+          "definition": "JSON NOT NULL",
+          "comment": "仅服务端可读的标准答案与解析快照"
+        },
+        {
+          "name": "points",
+          "definition": "DECIMAL(8,2) NOT NULL",
+          "comment": "满分"
+        },
+        {
+          "name": "earned_points",
+          "definition": "DECIMAL(8,2) NULL",
+          "comment": "得分"
+        },
+        {
+          "name": "is_correct",
+          "definition": "TINYINT NULL",
+          "comment": "正误"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "attempt_id",
+          "position"
+        ],
+        [
+          "attempt_id",
+          "question_resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "question_revision_id"
+        ],
+        [
+          "question_resource_id",
+          "question_revision_id"
+        ]
+      ],
+      "checks": [
+        "position > 0",
+        "points > 0",
+        "earned_points IS NULL OR (earned_points >= 0 AND earned_points <= points)",
+        "is_correct IS NULL OR is_correct IN (0,1)"
+      ]
+    },
+    {
+      "name": "quiz_attempt_answers",
+      "domain": "学习测验",
+      "description": "用户暂存答案，交卷后冻结",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "attempt_item_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "试卷题目"
+        },
+        {
+          "name": "selected_keys",
+          "definition": "JSON NOT NULL",
+          "comment": "选择的选项键数组"
+        },
+        {
+          "name": "lock_version",
+          "definition": "INT NOT NULL DEFAULT 0",
+          "comment": "防旧请求覆盖"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "attempt_item_id"
+        ]
+      ],
+      "indexes": [],
+      "checks": []
+    },
+    {
+      "name": "user_wrong_questions",
+      "domain": "学习测验",
+      "description": "错题聚合，不覆盖作答历史",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "question_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "题目"
+        },
+        {
+          "name": "last_wrong_item_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "最近错误"
+        },
+        {
+          "name": "wrong_count",
+          "definition": "INT NOT NULL DEFAULT 1",
+          "comment": "错误次数"
+        },
+        {
+          "name": "last_wrong_at",
+          "definition": "DATETIME(3) NOT NULL",
+          "comment": "最近错误"
+        },
+        {
+          "name": "review_state",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'PENDING'",
+          "comment": "复习状态"
+        },
+        {
+          "name": "last_reviewed_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "最近复习"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "question_resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "user_id",
+          "review_state",
+          "last_wrong_at"
+        ],
+        [
+          "question_resource_id"
+        ],
+        [
+          "last_wrong_item_id"
+        ]
+      ],
+      "checks": [
+        "wrong_count > 0",
+        "review_state IN ('PENDING','REVIEWED')"
+      ]
+    },
+    {
+      "name": "qa_sessions",
+      "domain": "智能问答",
+      "description": "私有多轮会话",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "title",
+          "definition": "VARCHAR(160) NOT NULL",
+          "comment": "会话名"
+        },
+        {
+          "name": "context_resource_id",
+          "definition": "BIGINT NULL",
+          "comment": "初始场景"
+        },
+        {
+          "name": "archived_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "删除归档时间"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [],
+      "indexes": [
+        [
+          "user_id",
+          "updated_at"
+        ],
+        [
+          "context_resource_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "qa_messages",
+      "domain": "智能问答",
+      "description": "问答消息，不存模型内部推理",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "session_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "会话"
+        },
+        {
+          "name": "parent_message_id",
+          "definition": "BIGINT NULL",
+          "comment": "回复消息"
+        },
+        {
+          "name": "role",
+          "definition": "VARCHAR(16) NOT NULL",
+          "comment": "USER/ASSISTANT"
+        },
+        {
+          "name": "body",
+          "definition": "LONGTEXT NOT NULL",
+          "comment": "消息内容"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'COMPLETED'",
+          "comment": "生成状态"
+        },
+        {
+          "name": "client_request_key",
+          "definition": "CHAR(36) NOT NULL",
+          "comment": "会话内消息幂等键"
+        },
+        {
+          "name": "context_revision_id",
+          "definition": "BIGINT NULL",
+          "comment": "场景版本"
+        },
+        {
+          "name": "refusal_reason",
+          "definition": "VARCHAR(40) NULL",
+          "comment": "拒答原因分类"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "session_id",
+          "client_request_key"
+        ],
+        [
+          "session_id",
+          "id"
+        ]
+      ],
+      "indexes": [
+        [
+          "session_id",
+          "created_at"
+        ],
+        [
+          "context_revision_id"
+        ],
+        [
+          "session_id",
+          "parent_message_id"
+        ]
+      ],
+      "checks": [
+        "role IN ('USER','ASSISTANT')",
+        "status IN ('GENERATING','COMPLETED','STOPPED','FAILED','REFUSED')"
+      ]
+    },
+    {
+      "name": "qa_runs",
+      "domain": "智能问答",
+      "description": "检索生成配置、耗时和用量",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "assistant_message_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "助手消息"
+        },
+        {
+          "name": "route",
+          "definition": "VARCHAR(24) NOT NULL",
+          "comment": "检索路径"
+        },
+        {
+          "name": "model_name",
+          "definition": "VARCHAR(100) NULL",
+          "comment": "实际生成模型"
+        },
+        {
+          "name": "embedding_model",
+          "definition": "VARCHAR(100) NULL",
+          "comment": "实际嵌入模型"
+        },
+        {
+          "name": "prompt_version",
+          "definition": "VARCHAR(40) NOT NULL",
+          "comment": "模板版本"
+        },
+        {
+          "name": "retrieval_config",
+          "definition": "JSON NOT NULL",
+          "comment": "TopK、阈值、距离度量及索引代次"
+        },
+        {
+          "name": "latency_ms",
+          "definition": "INT NULL",
+          "comment": "总耗时"
+        },
+        {
+          "name": "first_token_ms",
+          "definition": "INT NULL",
+          "comment": "首内容token耗时"
+        },
+        {
+          "name": "input_tokens",
+          "definition": "INT NULL",
+          "comment": "输入用量"
+        },
+        {
+          "name": "output_tokens",
+          "definition": "INT NULL",
+          "comment": "输出用量"
+        },
+        {
+          "name": "cost_estimate",
+          "definition": "DECIMAL(12,6) NULL",
+          "comment": "估算费用，非账单金额"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL",
+          "comment": "运行状态"
+        },
+        {
+          "name": "error_code",
+          "definition": "VARCHAR(80) NULL",
+          "comment": "失败分类"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "assistant_message_id"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "route IN ('VECTOR','STRUCTURED','GRAPH','HYBRID','REFUSE')",
+        "status IN ('RUNNING','SUCCEEDED','FAILED','STOPPED','REFUSED')",
+        "latency_ms IS NULL OR latency_ms >= 0",
+        "first_token_ms IS NULL OR first_token_ms >= 0",
+        "input_tokens IS NULL OR input_tokens >= 0",
+        "output_tokens IS NULL OR output_tokens >= 0",
+        "cost_estimate IS NULL OR cost_estimate >= 0"
+      ]
+    },
+    {
+      "name": "qa_retrieval_hits",
+      "domain": "智能问答",
+      "description": "检索证据快照，区分距离和相似度",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "run_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "运行"
+        },
+        {
+          "name": "rank_no",
+          "definition": "INT NOT NULL",
+          "comment": "排名"
+        },
+        {
+          "name": "channel",
+          "definition": "VARCHAR(20) NOT NULL",
+          "comment": "检索渠道"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NULL",
+          "comment": "知识版本"
+        },
+        {
+          "name": "segment_id",
+          "definition": "BIGINT NULL",
+          "comment": "来源段落"
+        },
+        {
+          "name": "raw_metric",
+          "definition": "DECIMAL(14,8) NULL",
+          "comment": "原始距离或相似度"
+        },
+        {
+          "name": "metric_name",
+          "definition": "VARCHAR(40) NULL",
+          "comment": "度量名称"
+        },
+        {
+          "name": "normalized_score",
+          "definition": "DECIMAL(10,8) NULL",
+          "comment": "标准化排序分，非正确概率"
+        },
+        {
+          "name": "content_snapshot",
+          "definition": "TEXT NOT NULL",
+          "comment": "当时证据内容"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "run_id",
+          "rank_no"
+        ]
+      ],
+      "indexes": [
+        [
+          "revision_id"
+        ],
+        [
+          "segment_id"
+        ]
+      ],
+      "checks": [
+        "rank_no > 0",
+        "revision_id IS NOT NULL OR segment_id IS NOT NULL",
+        "channel IN ('VECTOR','STRUCTURED','GRAPH')",
+        "normalized_score IS NULL OR (normalized_score >= 0 AND normalized_score <= 1)"
+      ]
+    },
+    {
+      "name": "qa_citations",
+      "domain": "智能问答",
+      "description": "引用快照保留原始证据",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "message_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "回答"
+        },
+        {
+          "name": "citation_no",
+          "definition": "INT NOT NULL",
+          "comment": "引用序号"
+        },
+        {
+          "name": "retrieval_hit_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "实际检索证据"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NULL",
+          "comment": "知识版本"
+        },
+        {
+          "name": "segment_id",
+          "definition": "BIGINT NULL",
+          "comment": "来源段落"
+        },
+        {
+          "name": "title_snapshot",
+          "definition": "VARCHAR(255) NOT NULL",
+          "comment": "当时标题"
+        },
+        {
+          "name": "quote_snapshot",
+          "definition": "TEXT NOT NULL",
+          "comment": "当时引用片段"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "message_id",
+          "citation_no"
+        ]
+      ],
+      "indexes": [
+        [
+          "retrieval_hit_id"
+        ],
+        [
+          "revision_id"
+        ],
+        [
+          "segment_id"
+        ]
+      ],
+      "checks": [
+        "citation_no > 0",
+        "revision_id IS NOT NULL OR segment_id IS NOT NULL"
+      ]
+    },
+    {
+      "name": "qa_feedback",
+      "domain": "智能问答",
+      "description": "质量反馈",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "反馈者"
+        },
+        {
+          "name": "message_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "回答"
+        },
+        {
+          "name": "rating",
+          "definition": "VARCHAR(20) NOT NULL",
+          "comment": "评价"
+        },
+        {
+          "name": "comment",
+          "definition": "TEXT NULL",
+          "comment": "说明"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "message_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "message_id"
+        ]
+      ],
+      "checks": [
+        "rating IN ('HELPFUL','UNHELPFUL','INCORRECT')"
+      ]
+    },
+    {
+      "name": "qa_saved_answers",
+      "domain": "智能问答",
+      "description": "私有回答收藏",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "message_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "自己的回答"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "message_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "message_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "user_tag_preferences",
+      "domain": "个性化推荐",
+      "description": "用户主动选择的兴趣",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "tag_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "标签"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "tag_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "tag_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "user_interest_scores",
+      "domain": "个性化推荐",
+      "description": "可重建的行为画像",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "tag_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "标签"
+        },
+        {
+          "name": "score",
+          "definition": "DECIMAL(14,6) NOT NULL",
+          "comment": "衰减分"
+        },
+        {
+          "name": "calculated_at",
+          "definition": "DATETIME(3) NOT NULL",
+          "comment": "计算时间"
+        },
+        {
+          "name": "algorithm_version",
+          "definition": "VARCHAR(40) NOT NULL",
+          "comment": "算法版本"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "tag_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "tag_id"
+        ]
+      ],
+      "checks": [
+        "score >= 0"
+      ]
+    },
+    {
+      "name": "recommendation_strategies",
+      "domain": "个性化推荐",
+      "description": "每场景只允许一个启用策略",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "scene",
+          "definition": "VARCHAR(32) NOT NULL",
+          "comment": "场景"
+        },
+        {
+          "name": "version_no",
+          "definition": "INT NOT NULL",
+          "comment": "配置版本"
+        },
+        {
+          "name": "name",
+          "definition": "VARCHAR(100) NOT NULL",
+          "comment": "名称"
+        },
+        {
+          "name": "config",
+          "definition": "JSON NOT NULL",
+          "comment": "权重、去重、多样性等参数"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(16) NOT NULL DEFAULT 'DRAFT'",
+          "comment": "状态"
+        },
+        {
+          "name": "active_scene",
+          "definition": "VARCHAR(32) GENERATED ALWAYS AS (CASE WHEN status = 'ACTIVE' THEN scene ELSE NULL END) STORED",
+          "comment": "有效配置唯一键"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "scene",
+          "version_no"
+        ],
+        [
+          "active_scene"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "version_no > 0",
+        "status IN ('DRAFT','ACTIVE','RETIRED')",
+        "scene IN ('DISCOVER','CONTINUE_LEARNING','REVIEW')"
+      ]
+    },
+    {
+      "name": "recommendation_requests",
+      "domain": "个性化推荐",
+      "description": "返回不等同曝光",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "strategy_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "策略版本"
+        },
+        {
+          "name": "request_key",
+          "definition": "CHAR(36) NOT NULL",
+          "comment": "幂等键"
+        },
+        {
+          "name": "scene",
+          "definition": "VARCHAR(32) NOT NULL",
+          "comment": "入口"
+        },
+        {
+          "name": "context_resource_id",
+          "definition": "BIGINT NULL",
+          "comment": "当前内容"
+        },
+        {
+          "name": "experiment_group",
+          "definition": "VARCHAR(40) NULL",
+          "comment": "预分配实验组"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "request_key"
+        ]
+      ],
+      "indexes": [
+        [
+          "user_id",
+          "created_at"
+        ],
+        [
+          "strategy_id",
+          "created_at"
+        ],
+        [
+          "context_resource_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "recommendation_items",
+      "domain": "个性化推荐",
+      "description": "推荐内容、理由和实际曝光",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "request_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "批次"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "内容"
+        },
+        {
+          "name": "revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "当时正式版本"
+        },
+        {
+          "name": "position",
+          "definition": "INT NOT NULL",
+          "comment": "位置"
+        },
+        {
+          "name": "score",
+          "definition": "DECIMAL(14,6) NOT NULL",
+          "comment": "最终分"
+        },
+        {
+          "name": "component_scores",
+          "definition": "JSON NOT NULL",
+          "comment": "各路分和有效权重"
+        },
+        {
+          "name": "reason_code",
+          "definition": "VARCHAR(40) NOT NULL",
+          "comment": "理由编码"
+        },
+        {
+          "name": "reason_text",
+          "definition": "VARCHAR(255) NOT NULL",
+          "comment": "理由文案"
+        },
+        {
+          "name": "exposed_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "实际可见确认"
+        },
+        {
+          "name": "first_clicked_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "首次点击"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "request_id",
+          "position"
+        ],
+        [
+          "request_id",
+          "resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "resource_id"
+        ],
+        [
+          "resource_id",
+          "revision_id"
+        ]
+      ],
+      "checks": [
+        "position > 0"
+      ]
+    },
+    {
+      "name": "recommendation_feedback",
+      "domain": "个性化推荐",
+      "description": "显式负反馈",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "用户"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "内容"
+        },
+        {
+          "name": "feedback_type",
+          "definition": "VARCHAR(24) NOT NULL",
+          "comment": "反馈类型"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "user_id",
+          "resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "resource_id"
+        ]
+      ],
+      "checks": [
+        "feedback_type IN ('NOT_INTERESTED','HIDE')"
+      ]
+    },
+    {
+      "name": "behavior_events",
+      "domain": "个性化推荐",
+      "description": "幂等事件；匿名浏览只计热度",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "event_key",
+          "definition": "CHAR(36) NOT NULL",
+          "comment": "事件幂等键"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NULL",
+          "comment": "登录用户"
+        },
+        {
+          "name": "anonymous_session",
+          "definition": "CHAR(36) NULL",
+          "comment": "短期匿名标识"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NULL",
+          "comment": "内容目标"
+        },
+        {
+          "name": "quiz_attempt_id",
+          "definition": "BIGINT NULL",
+          "comment": "测验目标"
+        },
+        {
+          "name": "recommendation_item_id",
+          "definition": "BIGINT NULL",
+          "comment": "归因推荐项"
+        },
+        {
+          "name": "behavior_type",
+          "definition": "VARCHAR(32) NOT NULL",
+          "comment": "行为类型"
+        },
+        {
+          "name": "occurred_at",
+          "definition": "DATETIME(3) NOT NULL",
+          "comment": "服务端确认时间"
+        },
+        {
+          "name": "metadata",
+          "definition": "JSON NULL",
+          "comment": "停留时间等补充属性"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "event_key"
+        ]
+      ],
+      "indexes": [
+        [
+          "user_id",
+          "occurred_at"
+        ],
+        [
+          "resource_id",
+          "behavior_type",
+          "occurred_at"
+        ],
+        [
+          "quiz_attempt_id"
+        ],
+        [
+          "recommendation_item_id"
+        ]
+      ],
+      "checks": [
+        "user_id IS NOT NULL OR anonymous_session IS NOT NULL",
+        "resource_id IS NOT NULL OR quiz_attempt_id IS NOT NULL",
+        "behavior_type IN ('VIEW','LIKE','UNLIKE','BOOKMARK','UNBOOKMARK','COMMENT','PUBLISH','COMPLETE_CARD','SUBMIT_QUIZ','RECOMMEND_CLICK')"
+      ]
+    },
+    {
+      "name": "community_sections",
+      "domain": "科普社区",
+      "description": "分区",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "name",
+          "definition": "VARCHAR(80) NOT NULL",
+          "comment": "名称"
+        },
+        {
+          "name": "code",
+          "definition": "VARCHAR(64) NOT NULL",
+          "comment": "编码"
+        },
+        {
+          "name": "description",
+          "definition": "VARCHAR(500) NULL",
+          "comment": "介绍"
+        },
+        {
+          "name": "sort_order",
+          "definition": "INT NOT NULL DEFAULT 0",
+          "comment": "顺序"
+        },
+        {
+          "name": "active",
+          "definition": "TINYINT NOT NULL DEFAULT 1",
+          "comment": "启用"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "code"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "active IN (0,1)"
+      ]
+    },
+    {
+      "name": "community_post_profiles",
+      "domain": "科普社区",
+      "description": "帖子文章身份，正文采用共用版本",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "POST或ARTICLE资源"
+        },
+        {
+          "name": "section_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "分区"
+        },
+        {
+          "name": "is_pinned",
+          "definition": "TINYINT NOT NULL DEFAULT 0",
+          "comment": "置顶"
+        },
+        {
+          "name": "comments_enabled",
+          "definition": "TINYINT NOT NULL DEFAULT 1",
+          "comment": "允许评论"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "section_id"
+        ]
+      ],
+      "checks": [
+        "is_pinned IN (0,1)",
+        "comments_enabled IN (0,1)"
+      ]
+    },
+    {
+      "name": "community_knowledge_links",
+      "domain": "科普社区",
+      "description": "内容版本关联知识",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "post_revision_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "文章或帖子版本"
+        },
+        {
+          "name": "knowledge_resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "知识"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "post_revision_id",
+          "knowledge_resource_id"
+        ]
+      ],
+      "indexes": [
+        [
+          "knowledge_resource_id"
+        ]
+      ],
+      "checks": []
+    },
+    {
+      "name": "community_comments",
+      "domain": "科普社区",
+      "description": "有限层级回复，服务层限制仅回复根评论",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "帖子文章"
+        },
+        {
+          "name": "user_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "作者"
+        },
+        {
+          "name": "parent_comment_id",
+          "definition": "BIGINT NULL",
+          "comment": "被回复评论"
+        },
+        {
+          "name": "body",
+          "definition": "TEXT NOT NULL",
+          "comment": "内容"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(16) NOT NULL DEFAULT 'VISIBLE'",
+          "comment": "状态"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [
+        [
+          "resource_id",
+          "id"
+        ]
+      ],
+      "indexes": [
+        [
+          "resource_id",
+          "status",
+          "created_at"
+        ],
+        [
+          "user_id"
+        ],
+        [
+          "resource_id",
+          "parent_comment_id"
+        ]
+      ],
+      "checks": [
+        "status IN ('VISIBLE','HIDDEN','DELETED')"
+      ]
+    },
+    {
+      "name": "community_reports",
+      "domain": "科普社区",
+      "description": "举报内容或评论，二选一",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "reporter_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "举报人"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NULL",
+          "comment": "帖子文章"
+        },
+        {
+          "name": "comment_id",
+          "definition": "BIGINT NULL",
+          "comment": "评论"
+        },
+        {
+          "name": "reason_code",
+          "definition": "VARCHAR(40) NOT NULL",
+          "comment": "原因"
+        },
+        {
+          "name": "description",
+          "definition": "TEXT NULL",
+          "comment": "补充说明"
+        },
+        {
+          "name": "status",
+          "definition": "VARCHAR(20) NOT NULL DEFAULT 'PENDING'",
+          "comment": "状态"
+        },
+        {
+          "name": "handler_id",
+          "definition": "BIGINT NULL",
+          "comment": "处理人"
+        },
+        {
+          "name": "resolution",
+          "definition": "TEXT NULL",
+          "comment": "结果"
+        },
+        {
+          "name": "resolved_at",
+          "definition": "DATETIME(3) NULL",
+          "comment": "处理时间"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [],
+      "indexes": [
+        [
+          "status",
+          "created_at"
+        ],
+        [
+          "reporter_id",
+          "created_at"
+        ],
+        [
+          "resource_id"
+        ],
+        [
+          "comment_id"
+        ],
+        [
+          "handler_id"
+        ]
+      ],
+      "checks": [
+        "(resource_id IS NOT NULL) + (comment_id IS NOT NULL) = 1",
+        "status IN ('PENDING','PROCESSING','RESOLVED','REJECTED')"
+      ]
+    },
+    {
+      "name": "community_moderation_actions",
+      "domain": "科普社区",
+      "description": "内容治理操作历史",
+      "columns": [
+        {
+          "name": "id",
+          "definition": "BIGINT NOT NULL AUTO_INCREMENT",
+          "comment": "主键；API按字符串返回"
+        },
+        {
+          "name": "report_id",
+          "definition": "BIGINT NULL",
+          "comment": "举报"
+        },
+        {
+          "name": "resource_id",
+          "definition": "BIGINT NULL",
+          "comment": "帖子文章"
+        },
+        {
+          "name": "comment_id",
+          "definition": "BIGINT NULL",
+          "comment": "评论"
+        },
+        {
+          "name": "actor_id",
+          "definition": "BIGINT NOT NULL",
+          "comment": "操作者"
+        },
+        {
+          "name": "action",
+          "definition": "VARCHAR(32) NOT NULL",
+          "comment": "动作"
+        },
+        {
+          "name": "reason",
+          "definition": "TEXT NOT NULL",
+          "comment": "依据"
+        },
+        {
+          "name": "created_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)",
+          "comment": "创建时间UTC"
+        },
+        {
+          "name": "updated_at",
+          "definition": "DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+          "comment": "更新时间UTC"
+        }
+      ],
+      "unique": [],
+      "indexes": [
+        [
+          "resource_id",
+          "created_at"
+        ],
+        [
+          "comment_id",
+          "created_at"
+        ],
+        [
+          "report_id"
+        ],
+        [
+          "actor_id"
+        ]
+      ],
+      "checks": [
+        "(resource_id IS NOT NULL) + (comment_id IS NOT NULL) = 1",
+        "action IN ('HIDE','RESTORE','SUSPEND','DISABLE_COMMENTS','DISMISS_REPORT')"
+      ]
+    }
+  ],
+  "foreign_keys": [
+    {
+      "table": "sys_user_roles",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "sys_user_roles",
+      "columns": [
+        "role_id"
+      ],
+      "reference": "sys_roles",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "sys_user_roles",
+      "columns": [
+        "granted_by"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "sys_role_permissions",
+      "columns": [
+        "role_id"
+      ],
+      "reference": "sys_roles",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "sys_role_permissions",
+      "columns": [
+        "permission_id"
+      ],
+      "reference": "sys_permissions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "sys_role_applications",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "sys_role_applications",
+      "columns": [
+        "role_id"
+      ],
+      "reference": "sys_roles",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "sys_role_applications",
+      "columns": [
+        "reviewer_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "auth_refresh_tokens",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "auth_refresh_tokens",
+      "columns": [
+        "replaced_by_id"
+      ],
+      "reference": "auth_refresh_tokens",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "file_objects",
+      "columns": [
+        "uploaded_by"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "content_categories",
+      "columns": [
+        "parent_id"
+      ],
+      "reference": "content_categories",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "content_resources",
+      "columns": [
+        "owner_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "content_revisions",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "content_revisions",
+      "columns": [
+        "category_id"
+      ],
+      "reference": "content_categories",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "content_revisions",
+      "columns": [
+        "created_by"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "revision_tags",
+      "columns": [
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "revision_tags",
+      "columns": [
+        "tag_id"
+      ],
+      "reference": "content_tags",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "resource_bookmarks",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "resource_bookmarks",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "resource_likes",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "resource_likes",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_resource_history",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_resource_history",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "resource_feedback",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "resource_feedback",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "resource_feedback",
+      "columns": [
+        "handler_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_notifications",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_notifications",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "sys_audit_logs",
+      "columns": [
+        "actor_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "source_documents",
+      "columns": [
+        "file_id"
+      ],
+      "reference": "file_objects",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "source_documents",
+      "columns": [
+        "origin_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "source_documents",
+      "columns": [
+        "parent_document_id"
+      ],
+      "reference": "source_documents",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "source_documents",
+      "columns": [
+        "submitted_by"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "document_parse_runs",
+      "columns": [
+        "document_id"
+      ],
+      "reference": "source_documents",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "revision_evidence",
+      "columns": [
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "revision_evidence",
+      "columns": [
+        "document_id"
+      ],
+      "reference": "source_documents",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "review_tasks",
+      "columns": [
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "review_tasks",
+      "columns": [
+        "document_id"
+      ],
+      "reference": "source_documents",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "review_tasks",
+      "columns": [
+        "submitted_by"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "review_tasks",
+      "columns": [
+        "reviewer_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "review_events",
+      "columns": [
+        "review_task_id"
+      ],
+      "reference": "review_tasks",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "review_events",
+      "columns": [
+        "actor_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "async_jobs",
+      "columns": [
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "async_jobs",
+      "columns": [
+        "document_id"
+      ],
+      "reference": "source_documents",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "async_job_attempts",
+      "columns": [
+        "job_id"
+      ],
+      "reference": "async_jobs",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "knowledge_entries",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "knowledge_aliases",
+      "columns": [
+        "knowledge_resource_id"
+      ],
+      "reference": "knowledge_entries",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "herb_profiles",
+      "columns": [
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "formula_profiles",
+      "columns": [
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "formula_ingredients",
+      "columns": [
+        "formula_resource_id"
+      ],
+      "reference": "knowledge_entries",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "formula_ingredients",
+      "columns": [
+        "herb_resource_id"
+      ],
+      "reference": "knowledge_entries",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "knowledge_relations",
+      "columns": [
+        "source_resource_id"
+      ],
+      "reference": "knowledge_entries",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "knowledge_relations",
+      "columns": [
+        "target_resource_id"
+      ],
+      "reference": "knowledge_entries",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "learning_topics",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "topic_profiles",
+      "columns": [
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "learning_cards",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "topic_cards",
+      "columns": [
+        "topic_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "topic_cards",
+      "columns": [
+        "card_resource_id"
+      ],
+      "reference": "learning_cards",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "card_knowledge_links",
+      "columns": [
+        "card_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "card_knowledge_links",
+      "columns": [
+        "knowledge_resource_id"
+      ],
+      "reference": "knowledge_entries",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "question_profiles",
+      "columns": [
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "question_options",
+      "columns": [
+        "question_revision_id"
+      ],
+      "reference": "question_profiles",
+      "reference_columns": [
+        "revision_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "question_knowledge_links",
+      "columns": [
+        "question_revision_id"
+      ],
+      "reference": "question_profiles",
+      "reference_columns": [
+        "revision_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "question_knowledge_links",
+      "columns": [
+        "knowledge_resource_id"
+      ],
+      "reference": "knowledge_entries",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "learning_assessments",
+      "columns": [
+        "anchor_resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "learning_assessments",
+      "columns": [
+        "created_by"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "assessment_questions",
+      "columns": [
+        "assessment_id"
+      ],
+      "reference": "learning_assessments",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "assessment_questions",
+      "columns": [
+        "question_revision_id"
+      ],
+      "reference": "question_profiles",
+      "reference_columns": [
+        "revision_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_enrollments",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_enrollments",
+      "columns": [
+        "topic_resource_id"
+      ],
+      "reference": "learning_topics",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_enrollments",
+      "columns": [
+        "last_card_resource_id"
+      ],
+      "reference": "learning_cards",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_card_progress",
+      "columns": [
+        "enrollment_id"
+      ],
+      "reference": "user_enrollments",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_card_progress",
+      "columns": [
+        "card_resource_id"
+      ],
+      "reference": "learning_cards",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "quiz_attempts",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "quiz_attempts",
+      "columns": [
+        "assessment_id"
+      ],
+      "reference": "learning_assessments",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "quiz_attempts",
+      "columns": [
+        "enrollment_id"
+      ],
+      "reference": "user_enrollments",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "quiz_attempt_items",
+      "columns": [
+        "attempt_id"
+      ],
+      "reference": "quiz_attempts",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "quiz_attempt_items",
+      "columns": [
+        "question_revision_id"
+      ],
+      "reference": "question_profiles",
+      "reference_columns": [
+        "revision_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "quiz_attempt_answers",
+      "columns": [
+        "attempt_item_id"
+      ],
+      "reference": "quiz_attempt_items",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_wrong_questions",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_wrong_questions",
+      "columns": [
+        "question_resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_wrong_questions",
+      "columns": [
+        "last_wrong_item_id"
+      ],
+      "reference": "quiz_attempt_items",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_sessions",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_sessions",
+      "columns": [
+        "context_resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_messages",
+      "columns": [
+        "session_id"
+      ],
+      "reference": "qa_sessions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_messages",
+      "columns": [
+        "context_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_runs",
+      "columns": [
+        "assistant_message_id"
+      ],
+      "reference": "qa_messages",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_retrieval_hits",
+      "columns": [
+        "run_id"
+      ],
+      "reference": "qa_runs",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_retrieval_hits",
+      "columns": [
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_retrieval_hits",
+      "columns": [
+        "segment_id"
+      ],
+      "reference": "document_segments",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_citations",
+      "columns": [
+        "message_id"
+      ],
+      "reference": "qa_messages",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_citations",
+      "columns": [
+        "retrieval_hit_id"
+      ],
+      "reference": "qa_retrieval_hits",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_citations",
+      "columns": [
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_citations",
+      "columns": [
+        "segment_id"
+      ],
+      "reference": "document_segments",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_feedback",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_feedback",
+      "columns": [
+        "message_id"
+      ],
+      "reference": "qa_messages",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_saved_answers",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_saved_answers",
+      "columns": [
+        "message_id"
+      ],
+      "reference": "qa_messages",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_tag_preferences",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_tag_preferences",
+      "columns": [
+        "tag_id"
+      ],
+      "reference": "content_tags",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_interest_scores",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_interest_scores",
+      "columns": [
+        "tag_id"
+      ],
+      "reference": "content_tags",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "recommendation_requests",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "recommendation_requests",
+      "columns": [
+        "strategy_id"
+      ],
+      "reference": "recommendation_strategies",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "recommendation_requests",
+      "columns": [
+        "context_resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "recommendation_items",
+      "columns": [
+        "request_id"
+      ],
+      "reference": "recommendation_requests",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "recommendation_items",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "recommendation_feedback",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "recommendation_feedback",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "behavior_events",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "behavior_events",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "behavior_events",
+      "columns": [
+        "quiz_attempt_id"
+      ],
+      "reference": "quiz_attempts",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "behavior_events",
+      "columns": [
+        "recommendation_item_id"
+      ],
+      "reference": "recommendation_items",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_post_profiles",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "content_resources",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_post_profiles",
+      "columns": [
+        "section_id"
+      ],
+      "reference": "community_sections",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_knowledge_links",
+      "columns": [
+        "post_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_knowledge_links",
+      "columns": [
+        "knowledge_resource_id"
+      ],
+      "reference": "knowledge_entries",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_comments",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "community_post_profiles",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_comments",
+      "columns": [
+        "user_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_reports",
+      "columns": [
+        "reporter_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_reports",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "community_post_profiles",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_reports",
+      "columns": [
+        "comment_id"
+      ],
+      "reference": "community_comments",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_reports",
+      "columns": [
+        "handler_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_moderation_actions",
+      "columns": [
+        "report_id"
+      ],
+      "reference": "community_reports",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_moderation_actions",
+      "columns": [
+        "resource_id"
+      ],
+      "reference": "community_post_profiles",
+      "reference_columns": [
+        "resource_id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_moderation_actions",
+      "columns": [
+        "comment_id"
+      ],
+      "reference": "community_comments",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_moderation_actions",
+      "columns": [
+        "actor_id"
+      ],
+      "reference": "sys_users",
+      "reference_columns": [
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "content_resources",
+      "columns": [
+        "id",
+        "published_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "content_revisions",
+      "columns": [
+        "resource_id",
+        "base_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "resource_feedback",
+      "columns": [
+        "resource_id",
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "document_segments",
+      "columns": [
+        "document_id",
+        "parse_run_id"
+      ],
+      "reference": "document_parse_runs",
+      "reference_columns": [
+        "document_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "revision_evidence",
+      "columns": [
+        "document_id",
+        "segment_id"
+      ],
+      "reference": "document_segments",
+      "reference_columns": [
+        "document_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "formula_ingredients",
+      "columns": [
+        "formula_resource_id",
+        "formula_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "formula_ingredients",
+      "columns": [
+        "herb_resource_id",
+        "herb_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "knowledge_relations",
+      "columns": [
+        "source_resource_id",
+        "source_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "knowledge_relations",
+      "columns": [
+        "target_resource_id",
+        "target_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "topic_cards",
+      "columns": [
+        "card_resource_id",
+        "card_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "card_knowledge_links",
+      "columns": [
+        "knowledge_resource_id",
+        "knowledge_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "question_knowledge_links",
+      "columns": [
+        "knowledge_resource_id",
+        "knowledge_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "assessment_questions",
+      "columns": [
+        "question_resource_id",
+        "question_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_enrollments",
+      "columns": [
+        "topic_resource_id",
+        "topic_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "user_card_progress",
+      "columns": [
+        "card_resource_id",
+        "card_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "quiz_attempt_items",
+      "columns": [
+        "question_resource_id",
+        "question_revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "recommendation_items",
+      "columns": [
+        "resource_id",
+        "revision_id"
+      ],
+      "reference": "content_revisions",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "formula_ingredients",
+      "columns": [
+        "formula_revision_id",
+        "evidence_id"
+      ],
+      "reference": "revision_evidence",
+      "reference_columns": [
+        "revision_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "knowledge_relations",
+      "columns": [
+        "source_revision_id",
+        "evidence_id"
+      ],
+      "reference": "revision_evidence",
+      "reference_columns": [
+        "revision_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "qa_messages",
+      "columns": [
+        "session_id",
+        "parent_message_id"
+      ],
+      "reference": "qa_messages",
+      "reference_columns": [
+        "session_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    },
+    {
+      "table": "community_comments",
+      "columns": [
+        "resource_id",
+        "parent_comment_id"
+      ],
+      "reference": "community_comments",
+      "reference_columns": [
+        "resource_id",
+        "id"
+      ],
+      "on_delete": "RESTRICT"
+    }
+  ]
+}

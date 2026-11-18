@@ -1,0 +1,140 @@
+{
+  "status": "PASSED",
+  "tests": [
+    {
+      "name": "execute V1__initial_schema.sql",
+      "passed": true
+    },
+    {
+      "name": "execute V2__seed_roles_and_categories.sql",
+      "passed": true
+    },
+    {
+      "name": "all designed tables created",
+      "passed": true
+    },
+    {
+      "name": "all foreign keys created",
+      "passed": true
+    },
+    {
+      "name": "seed creates no users",
+      "passed": true
+    },
+    {
+      "name": "admin has no professional review permission",
+      "passed": true
+    },
+    {
+      "name": "duplicate username",
+      "passed": true,
+      "expected_mysql_error": 1062
+    },
+    {
+      "name": "duplicate bookmark",
+      "passed": true,
+      "expected_mysql_error": 1062
+    },
+    {
+      "name": "orphan bookmark",
+      "passed": true,
+      "expected_mysql_error": 1452
+    },
+    {
+      "name": "published revision must belong to resource",
+      "passed": true,
+      "expected_mysql_error": 1452
+    },
+    {
+      "name": "invalid visibility state",
+      "passed": true,
+      "expected_mysql_error": 3819
+    },
+    {
+      "name": "duplicate revision number",
+      "passed": true,
+      "expected_mysql_error": 1062
+    },
+    {
+      "name": "feedback revision must belong to resource",
+      "passed": true,
+      "expected_mysql_error": 1452
+    },
+    {
+      "name": "cannot approve own submission",
+      "passed": true,
+      "expected_mysql_error": 3819
+    },
+    {
+      "name": "review target exclusive",
+      "passed": true,
+      "expected_mysql_error": 3819
+    },
+    {
+      "name": "segment parse run must belong to document",
+      "passed": true,
+      "expected_mysql_error": 1452
+    },
+    {
+      "name": "same-session message parent",
+      "passed": true,
+      "expected_mysql_error": 1452
+    },
+    {
+      "name": "same-post comment parent",
+      "passed": true,
+      "expected_mysql_error": 1452
+    },
+    {
+      "name": "report target exclusive",
+      "passed": true,
+      "expected_mysql_error": 3819
+    },
+    {
+      "name": "one active strategy per scene",
+      "passed": true,
+      "expected_mysql_error": 1062
+    },
+    {
+      "name": "event deduplication",
+      "passed": true,
+      "expected_mysql_error": 1062
+    },
+    {
+      "name": "job idempotency",
+      "passed": true,
+      "expected_mysql_error": 1062
+    },
+    {
+      "name": "score cannot exceed total",
+      "passed": true,
+      "expected_mysql_error": 3819
+    },
+    {
+      "name": "submission requires score and time",
+      "passed": true,
+      "expected_mysql_error": 3819
+    },
+    {
+      "name": "negative item points",
+      "passed": true,
+      "expected_mysql_error": 3819
+    },
+    {
+      "name": "referenced revision cannot be deleted",
+      "passed": true,
+      "expected_mysql_error": 1451
+    },
+    {
+      "name": "question snapshot independent from current content",
+      "passed": true
+    },
+    {
+      "name": "answer snapshot independent from current explanation",
+      "passed": true
+    }
+  ],
+  "scratch": "C:\\Users\\86150\\Documents\\Codex\\2026-10-22\\new-chat\\work\\architecture-design\\mysql-47619b48fc",
+  "server_stopped": true,
+  "mysql_version": "8.0.42"
+}
