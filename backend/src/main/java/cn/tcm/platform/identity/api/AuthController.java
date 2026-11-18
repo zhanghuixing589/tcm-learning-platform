@@ -20,11 +20,11 @@ public class AuthController {
     public ApiResponse<?> register(@Valid @RequestBody IdentityDtos.Register input) { return ApiResponse.ok(service.register(input)); }
     @PostMapping("/login")
     public ApiResponse<?> login(@Valid @RequestBody IdentityDtos.Login input,HttpServletResponse response) {
-        var issued=service.login(input);cookie(response,issued.refresh(),Duration.ofDays(properties.refreshDays()));return ApiResponse.ok(issued.body());
+        var issued=service.login(input);cookie(response,issued.refresh(),Duration.ofSeconds(issued.refreshMaxAgeSeconds()));return ApiResponse.ok(issued.body());
     }
     @PostMapping("/refresh")
     public ApiResponse<?> refresh(@CookieValue(name="tcm_refresh",required=false)String refresh,HttpServletResponse response) {
-        try {var issued=service.refresh(refresh);cookie(response,issued.refresh(),Duration.ofDays(properties.refreshDays()));return ApiResponse.ok(issued.body());}
+        try {var issued=service.refresh(refresh);cookie(response,issued.refresh(),Duration.ofSeconds(issued.refreshMaxAgeSeconds()));return ApiResponse.ok(issued.body());}
         catch(cn.tcm.platform.common.ApiException e){cookie(response,"",Duration.ZERO);throw e;}
     }
     @PostMapping("/logout")

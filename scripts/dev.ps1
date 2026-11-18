@@ -21,6 +21,7 @@ foreach ($port in @($BackendPort,$FrontendPort,$AiPort)) {
 }
 $jar=Join-Path $projectRoot 'backend\target\tcm-platform-0.1.0.jar'
 if (!(Test-Path -LiteralPath $jar)) { throw 'Build backend first: scripts/test-backend.ps1' }
+if (!(Test-Path -LiteralPath (Join-Path $projectRoot 'frontend\vite.config.ts'))) { throw 'Frontend config is missing. Restore frontend/vite.config.ts before starting services.' }
 python (Join-Path $PSScriptRoot 'dev_mysql.py') start
 if ($LASTEXITCODE -ne 0) { throw 'Isolated MySQL could not start' }
 . (Join-Path $PSScriptRoot 'Import-DevEnvironment.ps1') -BackendPort $BackendPort -FrontendPort $FrontendPort -AiPort $AiPort
@@ -30,7 +31,7 @@ try {
     $services+=@{id=$backend.Id;startedTicks=$backend.StartTime.ToUniversalTime().Ticks.ToString();service='backend'}
     $ai=Start-Process -FilePath (Join-Path $projectRoot 'ai-service\.venv\Scripts\python.exe') -ArgumentList @('-m','uvicorn','app.main:create_app','--factory','--host','127.0.0.1','--port',"$AiPort") -WorkingDirectory (Join-Path $projectRoot 'ai-service') -WindowStyle Hidden -RedirectStandardOutput (Join-Path $projectRoot 'runtime\ai.out.log') -RedirectStandardError (Join-Path $projectRoot 'runtime\ai.err.log') -PassThru
     $services+=@{id=$ai.Id;startedTicks=$ai.StartTime.ToUniversalTime().Ticks.ToString();service='ai'}
-    $front=Start-Process -FilePath (Get-Command node).Source -ArgumentList @('node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',"$FrontendPort",'--strictPort') -WorkingDirectory (Join-Path $projectRoot 'frontend') -WindowStyle Hidden -RedirectStandardOutput (Join-Path $projectRoot 'runtime\frontend.out.log') -RedirectStandardError (Join-Path $projectRoot 'runtime\frontend.err.log') -PassThru
+    $front=Start-Process -FilePath (Get-Command node).Source -ArgumentList @('node_modules/vite/bin/vite.js','--config','vite.config.ts','--host','127.0.0.1','--port',"$FrontendPort",'--strictPort') -WorkingDirectory (Join-Path $projectRoot 'frontend') -WindowStyle Hidden -RedirectStandardOutput (Join-Path $projectRoot 'runtime\frontend.out.log') -RedirectStandardError (Join-Path $projectRoot 'runtime\frontend.err.log') -PassThru
     $services+=@{id=$front.Id;startedTicks=$front.StartTime.ToUniversalTime().Ticks.ToString();service='frontend'}
     $services | ConvertTo-Json | Set-Content -LiteralPath $servicesPath -Encoding UTF8
     $deadline=(Get-Date).AddSeconds(180)

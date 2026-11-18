@@ -44,6 +44,20 @@ try:
         run((root/'backend/src/main/resources/db/migration'/filename).read_text(encoding='utf-8'))
         report['tests'].append({'name':'execute '+filename,'passed':True})
         print('migration passed: '+filename,flush=True)
+    positive('seed creates no users before upgrade','SELECT COUNT(*) FROM sys_users',0)
+    run("INSERT INTO sys_users(id,username,password_hash,nickname) VALUES(9000,'migration_fixture','fixture-not-login-hash','fixture');")
+    run("""INSERT INTO auth_refresh_tokens(user_id,token_hash,family_key,expires_at,created_at,revoked_at) VALUES
+        (9000,REPEAT('a',64),'old-family',UTC_TIMESTAMP(3)+INTERVAL 7 DAY,UTC_TIMESTAMP(3)-INTERVAL 40 DAY,UTC_TIMESTAMP(3)-INTERVAL 6 DAY),
+        (9000,REPEAT('b',64),'old-family',UTC_TIMESTAMP(3)+INTERVAL 7 DAY,UTC_TIMESTAMP(3)-INTERVAL 6 DAY,NULL),
+        (9000,REPEAT('c',64),'recent-family',UTC_TIMESTAMP(3)+INTERVAL 7 DAY,UTC_TIMESTAMP(3)-INTERVAL 29 DAY,NULL);""")
+    run((root/'backend/src/main/resources/db/migration/V3__session_absolute_expiration.sql').read_text(encoding='utf-8'))
+    report['tests'].append({'name':'execute V3__session_absolute_expiration.sql','passed':True})
+    positive('legacy family anchored to earliest login',"SELECT COUNT(DISTINCT absolute_expires_at) FROM auth_refresh_tokens WHERE family_key='old-family'",1)
+    positive('expired legacy family revoked',"SELECT COUNT(*) FROM auth_refresh_tokens WHERE family_key='old-family' AND revoked_at IS NULL",0)
+    positive('legacy deadline equals first login plus thirty days',"SELECT COUNT(*) FROM auth_refresh_tokens WHERE token_hash=REPEAT('a',64) AND absolute_expires_at=created_at+INTERVAL 30 DAY",1)
+    positive('recent legacy family remains active with capped refresh',"SELECT COUNT(*) FROM auth_refresh_tokens WHERE family_key='recent-family' AND revoked_at IS NULL AND expires_at=absolute_expires_at AND absolute_expires_at=created_at+INTERVAL 30 DAY",1)
+    expect('refresh cannot exceed absolute deadline',"UPDATE auth_refresh_tokens SET expires_at=absolute_expires_at+INTERVAL 1 SECOND WHERE token_hash=REPEAT('c',64)",3819)
+    run('DELETE FROM auth_refresh_tokens WHERE user_id=9000; DELETE FROM sys_users WHERE id=9000;')
     model=json.loads((root/'database/schema_model.json').read_text(encoding='utf-8'))
     positive('all designed tables created',"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()",len(model['tables']))
     positive('all foreign keys created',"SELECT COUNT(*) FROM information_schema.referential_constraints WHERE constraint_schema=DATABASE()",len(model['foreign_keys']))

@@ -1,11 +1,62 @@
 import { test, expect } from "@playwright/test";
 import { mkdirSync, readFileSync } from "node:fs";
 
+test("registration form enforces ASCII password complexity and length boundaries", async ({
+  page,
+}) => {
+  await page.goto("/register");
+  const password = page.getByLabel("密码", { exact: true });
+  await expect(password).toHaveAttribute("minlength", "10");
+  await expect(password).toHaveAttribute("maxlength", "12");
+  await expect(page.locator("#password-hint")).toContainText(
+    "大写字母、小写字母",
+  );
+  await page.getByLabel("用户名", { exact: true }).fill(`policy_${Date.now()}`);
+  await page.getByLabel("昵称", { exact: true }).fill("密码规则验证");
+  const requests: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().endsWith("/auth/register"))
+      requests.push(request.url());
+  });
+  for (const invalid of [
+    "Abcdefg12",
+    "abcdefgh12",
+    "ABCDEFGH12",
+    "Abcdefghij",
+    "Abcdef12中文",
+    "Abcdef12 !",
+    "Abcdefgh１!",
+  ]) {
+    await password.fill(invalid);
+    expect(
+      await password.evaluate((element: HTMLInputElement) =>
+        element.checkValidity(),
+      ),
+    ).toBe(false);
+    await page.getByRole("button", { name: "创建账号", exact: true }).click();
+    expect(requests).toHaveLength(0);
+  }
+  for (const valid of [
+    "Abcdefgh12",
+    "Abcdefghi!",
+    "Abcdefghij1!",
+    "Abcdefg'12",
+    "Abcdefg\\12",
+  ]) {
+    await password.fill(valid);
+    expect(
+      await password.evaluate((element: HTMLInputElement) =>
+        element.checkValidity(),
+      ),
+    ).toBe(true);
+  }
+});
+
 test("two tabs restore the shared session concurrently and logout propagates", async ({
   context,
 }) => {
   const username = `tabs_${Date.now()}`;
-  const password = "Tabs-test-password-762!";
+  const password = "TabsPass12!";
   expect(
     (
       await context.request.post("/api/v1/auth/register", {
@@ -25,7 +76,7 @@ test("two tabs restore the shared session concurrently and logout propagates", a
   await Promise.all([first.goto("/account"), second.goto("/account")]);
   for (const page of [first, second]) {
     await expect(page).toHaveURL(/\/account$/);
-    await expect(page.getByLabel("昵称", { exact: true })).toHaveValue(
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       "多页学习者",
     );
   }
@@ -39,7 +90,7 @@ test("learner registration, profile, contribution application, cookie restoratio
   context,
 }) => {
   const name = `browser_${Date.now()}`;
-  const password = "Browser-test-password-582!";
+  const password = "WebPass123!";
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/register");
@@ -53,6 +104,10 @@ test("learner registration, profile, contribution application, cookie restoratio
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page).toHaveURL(/\/account$/);
   await expect(page.getByText("学习者", { exact: true })).toBeVisible();
+  await page
+    .getByRole("link", { name: "编辑资料", exact: true })
+    .first()
+    .click();
   await page.getByLabel("昵称", { exact: true }).fill("持续学习者");
   await page
     .getByLabel("个人简介", { exact: true })
@@ -132,7 +187,7 @@ test("administrator approves contribution and separately grants reviewer access"
     readFileSync("../runtime/e2e-admin.json", "utf8").replace(/^\uFEFF/, ""),
   );
   const username = `applicant_${Date.now()}`;
-  const password = "Applicant-test-password-891!";
+  const password = "ApplyPass12!";
   expect(
     (
       await request.post("/api/v1/auth/register", {

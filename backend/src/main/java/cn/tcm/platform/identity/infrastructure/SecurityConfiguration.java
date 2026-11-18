@@ -28,6 +28,7 @@ import java.util.List;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfiguration {
+    @Bean java.time.Clock securityClock() { return java.time.Clock.systemUTC(); }
     @Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(12); }
     @Bean SecurityFilterChain security(HttpSecurity http,SecurityProperties properties,IdentityMapper mapper,
                                        TokenService tokens,ObjectMapper json) throws Exception {

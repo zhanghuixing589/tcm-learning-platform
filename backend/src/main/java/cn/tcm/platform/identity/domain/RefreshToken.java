@@ -8,6 +8,7 @@ public class RefreshToken {
     public String tokenHash;
     public String familyKey;
     public LocalDateTime expiresAt;
+    public LocalDateTime absoluteExpiresAt;
     public LocalDateTime revokedAt;
     public Long replacedById;
 }

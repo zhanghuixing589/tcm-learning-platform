@@ -3,7 +3,10 @@ $ErrorActionPreference='Stop'
 $projectRoot=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'Import-DevEnvironment.ps1')
 $name='e2e_admin_'+(Get-Date -Format 'yyyyMMddHHmmss')
-$password=[guid]::NewGuid().ToString()+ 'a!'
+$randomBytes=New-Object byte[] 8
+$random=[Security.Cryptography.RandomNumberGenerator]::Create()
+try { $random.GetBytes($randomBytes) } finally { $random.Dispose() }
+$password='Aa'+[Convert]::ToBase64String($randomBytes).Substring(0,8)+'1!'
 try {
     $env:BOOTSTRAP_ADMIN_USERNAME=$name; $env:BOOTSTRAP_ADMIN_PASSWORD=$password
     & (Join-Path $JavaHome 'bin\java.exe') '-Duser.timezone=UTC' '-jar' (Join-Path $projectRoot 'backend\target\tcm-platform-0.1.0.jar') '--bootstrap-admin' '--server.port=0' *> (Join-Path $projectRoot 'runtime\bootstrap-admin.log')
