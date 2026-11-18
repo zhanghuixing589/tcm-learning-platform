@@ -1,0 +1,9 @@
+erDiagram
+  sys_users ||--o{ sys_user_roles : "user_id"
+  sys_roles ||--o{ sys_user_roles : "role_id"
+  sys_roles ||--o{ sys_role_permissions : "role_id"
+  sys_permissions ||--o{ sys_role_permissions : "permission_id"
+  sys_users ||--o{ sys_role_applications : "user_id"
+  sys_roles ||--o{ sys_role_applications : "role_id"
+  sys_users ||--o{ auth_refresh_tokens : "user_id"
+  auth_refresh_tokens ||--o{ auth_refresh_tokens : "replaced_by_id"

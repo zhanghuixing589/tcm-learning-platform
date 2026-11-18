@@ -1,0 +1,13 @@
+{
+  "status": "PASSED",
+  "tables": 69,
+  "foreign_keys": 149,
+  "columns": 593,
+  "mapped_functions": 95,
+  "database_checks": 28,
+  "python_syntax": "PASSED",
+  "local_links": "PASSED",
+  "ddl_model_dictionary": "PASSED",
+  "ddl_sha256": "cf544a7f233f6c021d08229d09afe7c6de80b346a10cd9bd977e9148774801c3",
+  "application_status": "DESIGN_ONLY_NOT_IMPLEMENTED"
+}
