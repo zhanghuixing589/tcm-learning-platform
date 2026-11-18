@@ -16,4 +16,5 @@ runtime/
 logs/
 .DS_Store
 Thumbs.db
+frontend/.vite/
 
