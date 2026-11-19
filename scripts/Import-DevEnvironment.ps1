@@ -16,3 +16,4 @@ $env:COOKIE_SECURE='false'; $env:SERVER_PORT="$BackendPort"
 $env:ALLOWED_ORIGINS="http://localhost:$FrontendPort,http://127.0.0.1:$FrontendPort"
 $env:AI_BASE_URL="http://127.0.0.1:$AiPort"; $env:BACKEND_URL="http://127.0.0.1:$BackendPort"
 $env:AVATAR_STORAGE_DIR=Join-Path $projectRoot 'runtime\avatars'
+$env:SOURCE_STORAGE_DIR=Join-Path $projectRoot 'runtime\source-files'

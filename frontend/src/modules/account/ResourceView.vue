@@ -87,6 +87,11 @@ onBeforeUnmount(() => {
       <el-button @click="load">重新加载</el-button>
     </div>
     <article v-else-if="item">
+      <p v-if="item.resourceType === 'KNOWLEDGE'" class="success-message">
+        <RouterLink :to="`/knowledge/${item.id}`"
+          >进入知识详情，查看结构化知识、来源依据与版本</RouterLink
+        >
+      </p>
       <header class="resource-heading">
         <span class="entry-type">{{ typeLabels[item.resourceType] }}</span>
         <h1>{{ item.title }}</h1>

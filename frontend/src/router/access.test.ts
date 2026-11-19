@@ -20,4 +20,26 @@ describe("route access", () => {
       ),
     ).toBe(true);
   });
+  it("admits an existing reviewer or moderator without requiring administrator permissions", () => {
+    const review = {
+      requiresAuth: true,
+      anyPermissions: ["knowledge:review", "community:moderate"],
+    };
+    expect(canEnter(review, null)).toBe(false);
+    expect(canEnter(review, { permissions: [] })).toBe(false);
+    expect(canEnter(review, { permissions: ["knowledge:review"] })).toBe(true);
+    expect(canEnter(review, { permissions: ["community:moderate"] })).toBe(
+      true,
+    );
+    expect(canEnter(review, { permissions: ["system:user:manage"] })).toBe(
+      false,
+    );
+    expect(
+      canEnter(
+        { ...review, permission: "system:job:manage" },
+        { permissions: ["knowledge:review"] },
+      ),
+    ).toBe(false);
+    expect(canEnter({ anyPermissions: [] }, { permissions: [] })).toBe(false);
+  });
 });

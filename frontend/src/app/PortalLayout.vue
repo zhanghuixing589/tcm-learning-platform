@@ -13,9 +13,23 @@ const session = useSessionStore();
     >
     <nav aria-label="主要导航">
       <RouterLink to="/">学习门户</RouterLink>
+      <RouterLink to="/knowledge">知识中心</RouterLink>
       <template v-if="session.user"
         ><RouterLink to="/account">个人中心</RouterLink
         ><RouterLink to="/applications">贡献资格</RouterLink
+        ><RouterLink to="/contribute">贡献工作台</RouterLink
+        ><RouterLink
+          v-if="
+            session.user.permissions.some((p) =>
+              ['knowledge:review', 'community:moderate'].includes(p),
+            )
+          "
+          to="/reviews"
+          >内容审核</RouterLink
+        ><RouterLink
+          v-if="session.user.permissions.includes('system:job:manage')"
+          to="/admin/jobs"
+          >技术任务</RouterLink
         ><RouterLink
           v-if="session.user.permissions.includes('system:user:manage')"
           to="/admin"

@@ -1,6 +1,10 @@
 # API与服务契约基线
 
-外部前缀/api/v1；内部前缀/internal/v1，内部接口不通过Nginx公开。第一阶段已实现账户、角色资格、用户管理与健康端点；下表其他业务接口仍为设计契约。尚未生成OpenAPI文件。
+## 第二阶段接口
+
+第二阶段来源资料、解析任务、知识版本、专业审核、知识中心、纠错与方剂比较的具体路径和字段，按 [第二阶段设计](../docs/superpowers/specs/2026-11-19-stage-two-design.md) 实现；当前验收状态见 [第二阶段实际记录](../docs/10-第二阶段实现与验收.md)。来源工作台与知识中心复用现有统一响应、身份与权限；以下表格仍含第三至七阶段的设计契约，不代表全部路由已实现。
+
+外部前缀/api/v1；内部前缀/internal/v1，内部接口不通过Nginx公开。第一阶段已实现账户、角色资格、用户管理与健康端点；第二阶段补充来源、知识、审核与任务接口。下表同时保留其他阶段的设计契约，不能据此宣称问答、学习测验或推荐已实现。尚未生成OpenAPI文件。
 
 第一阶段补充接口：GET /me/role-applications；GET /admin/users；PATCH /admin/users/{id}/status；PUT /admin/users/{id}/roles；GET /admin/role-applications。角色修改要求system:role:manage，其他账户管理要求system:user:manage。用户不能在该接口修改自己的角色或禁用自己；LEARNER基础角色保留。
 
@@ -27,6 +31,8 @@ Cookie：tcm_refresh，HttpOnly，SameSite=Strict，Path=/api/v1/auth。refresh/
 | 运维 | GET /admin/jobs；POST /admin/jobs/{id}/retries；GET /admin/audit-logs | 只允许技术管理权限，日志脱敏 |
 
 Python接口：POST /internal/v1/parse、/extract、/indexes/upsert、/indexes/remove、/retrieve、/generate-stream。每次调用携带短期内部凭据、traceId和明确对象版本。Java负责鉴权、MySQL状态和任务回写，Python负责输出结构化结果及检索数据写入。返回证据必须包含revisionId/segmentId、channel、metricName、rawMetric及原文，不接受模型自行编造来源ID。
+
+第二阶段实际实现的是 /internal/v1/parse：请求 {fileName,contentBase64}，携带既有内部凭据和任务 traceId；响应 {parserName,segments:[{segmentNo,pageLabel,headingPath,body}]}。Java 保留 jobId/parseRunId/runToken 上下文并执行带租约的条件回写，浏览器不能直接调用内部接口或传递文件系统路径。其余 Python 提取、索引、检索和生成接口仍为后续设计，索引任务当前明确显示等待第四阶段服务。
 
 错误分类：VALIDATION_ERROR→400、UNAUTHENTICATED→401、FORBIDDEN→403、NOT_FOUND→404、STATE_CONFLICT→409、RATE_LIMITED→429、UPSTREAM_UNAVAILABLE→503。内部堆栈不返回浏览器。
 

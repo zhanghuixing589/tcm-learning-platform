@@ -66,6 +66,22 @@ class PersonalCenterIntegrationTest {
         assertThat(profile.path("profile").has("permissions")).isFalse();
         mvc.perform(get("/api/v1/me/bookmarks")).andExpect(status().isUnauthorized());
     }
+    @Test void inactiveKnowledgeEvidenceCannotBeReadThroughGenericResourceOrBookmarked() throws Exception {
+        User owner=user(),visitor=user();long id=resource(owner,true);
+        db.update("UPDATE content_resources SET resource_type='KNOWLEDGE' WHERE id=?",id);
+        long revision=db.queryForObject("SELECT published_revision_id FROM content_resources WHERE id=?",Long.class,id);
+        db.update("INSERT INTO source_documents(title,source_type,source_url,submitted_by,review_state) VALUES('可追溯来源','WEB','https://example.org/reference',?,'APPROVED')",owner.id());
+        long document=db.queryForObject("SELECT MAX(id) FROM source_documents WHERE submitted_by=?",Long.class,owner.id());
+        db.update("INSERT INTO revision_evidence(revision_id,document_id,location_label,quote_text) VALUES(?,?,'章节1','证据原文')",revision,document);
+        call(as(visitor,get("/api/v1/resources/"+id)),200);
+        call(as(visitor,put("/api/v1/resources/"+id+"/bookmark")),200);
+        db.update("UPDATE source_documents SET availability='SUSPENDED' WHERE id=?",document);
+        call(as(visitor,get("/api/v1/resources/"+id)),404);
+        call(as(visitor,put("/api/v1/resources/"+id+"/bookmark")),404);
+        JsonNode placeholder=call(as(visitor,get("/api/v1/me/bookmarks")),200).path("items").get(0);
+        assertThat(placeholder.path("available").asBoolean()).isFalse();
+        assertThat(placeholder.path("title").asText()).isEqualTo("内容暂不可查看");
+    }
     @Test void publicIdentityDoesNotExposeBackOfficeRoles() throws Exception {
         User owner=user(),visitor=user();
         db.update("INSERT INTO sys_user_roles(user_id,role_id) SELECT ?,id FROM sys_roles WHERE code='ADMIN'",owner.id());sqlSession.clearCache();
@@ -284,11 +300,12 @@ class PersonalCenterIntegrationTest {
         User u=user();
         call(as(u,multipart("/api/v1/me/avatar")),400);
     }
-    @Test void transportLimitMatchesDocumentedAvatarLimit() {
-        assertThat(multipartProperties.getMaxFileSize().toBytes()).isEqualTo(2*1024*1024);
+    @Test void transportLimitAllowsDocumentsWhileAvatarHasItsOwnLimit() {
+        // Documents have a larger transport limit; AvatarService independently enforces its 2MB limit.
+        assertThat(multipartProperties.getMaxFileSize().toBytes()).isEqualTo(10*1024*1024);
     }
     @Test @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
-    void oversizedMultipartIsControlledBeforeControllerResolution() throws Exception {
+    void oversizedAvatarIsControlledOverRealHttp() throws Exception {
         User u=user();
         try {
             String boundary="TcmAvatarBoundary";

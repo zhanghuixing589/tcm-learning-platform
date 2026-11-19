@@ -16,7 +16,8 @@ import java.util.*;
 public class PersonalCenterService {
     private final JdbcTemplate db;
     private final IdentityMapper identity;
-    static final String AVAILABLE="(r.visibility_status='PUBLISHED' AND p.id IS NOT NULL AND p.revision_state='APPROVED' AND o.status='ACTIVE')";
+    static final String AVAILABLE="(r.visibility_status='PUBLISHED' AND p.id IS NOT NULL AND p.revision_state='APPROVED' AND o.status='ACTIVE'"
+            +" AND (r.resource_type<>'KNOWLEDGE' OR "+PublishedKnowledge.evidenceIsActive("p")+"))";
     private static final String JOINS=" FROM content_resources r JOIN sys_users o ON o.id=r.owner_id LEFT JOIN content_revisions p ON p.id=r.published_revision_id AND p.resource_id=r.id LEFT JOIN content_revisions l ON l.resource_id=r.id AND l.version_no=(SELECT MAX(v.version_no) FROM content_revisions v WHERE v.resource_id=r.id) ";
     private static final String LIKES="(SELECT COUNT(*) FROM resource_likes lk JOIN sys_users lu ON lu.id=lk.user_id AND lu.status='ACTIVE' WHERE lk.resource_id=r.id AND lk.user_id<>r.owner_id)";
     private static final String BOOKMARKS="(SELECT COUNT(*) FROM resource_bookmarks bk JOIN sys_users bu ON bu.id=bk.user_id AND bu.status='ACTIVE' WHERE bk.resource_id=r.id)";

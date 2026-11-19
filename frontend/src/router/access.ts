@@ -10,9 +10,21 @@ export function safeRedirect(value: unknown): string {
   return value;
 }
 export function canEnter(
-  meta: { requiresAuth?: boolean; permission?: string },
+  meta: {
+    requiresAuth?: boolean;
+    permission?: string;
+    anyPermissions?: string[];
+  },
   user: { permissions: string[] } | null,
 ): boolean {
-  if ((meta.requiresAuth || meta.permission) && !user) return false;
-  return !meta.permission || !!user?.permissions.includes(meta.permission);
+  if ((meta.requiresAuth || meta.permission || meta.anyPermissions) && !user)
+    return false;
+  if (meta.permission && !user?.permissions.includes(meta.permission))
+    return false;
+  return (
+    !meta.anyPermissions ||
+    meta.anyPermissions.some((permission) =>
+      user?.permissions.includes(permission),
+    )
+  );
 }

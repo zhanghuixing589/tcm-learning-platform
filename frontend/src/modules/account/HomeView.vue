@@ -1,14 +1,7 @@
 <script setup lang="ts">
 import { useSessionStore } from "../../shared/stores/session";
 const session = useSessionStore();
-const modules = [
-  "知识库中心",
-  "中医药知识中心",
-  "问答助手",
-  "学习与测验",
-  "个性化推荐",
-  "科普社区",
-];
+const modules = ["问答助手", "学习与测验", "个性化推荐", "科普社区"];
 </script>
 <template>
   <section class="welcome">
@@ -18,26 +11,45 @@ const modules = [
       <p class="lead">
         从理解一味药，到读懂一张方。这里将连接知识、问答与练习，陪你逐步建立中医药知识体系。
       </p>
-      <RouterLink
-        :to="session.user ? '/account' : '/register'"
-        class="primary-link"
-        >{{ session.user ? "进入个人中心" : "创建学习账号" }}
-        <span aria-hidden="true">→</span></RouterLink
+      <RouterLink to="/knowledge" class="primary-link"
+        >进入知识中心 <span aria-hidden="true">→</span></RouterLink
       >
     </div>
     <aside class="welcome-note">
       <span class="status-dot" aria-hidden="true"></span
-      ><strong>平台正在逐步开放</strong>
-      <p>现在可以创建账号、完善个人资料，申请成为内容贡献者。</p>
-      <p>知识浏览、智能问答和学习练习将在后续开放。</p>
+      ><strong>从正式知识，追溯可靠来源</strong>
+      <p>
+        知识中心已开放，可按类型与分类阅读已审核内容，对照药材属性与方剂组成。
+      </p>
+      <p>
+        贡献者可以上传资料、核对原文并整理知识草稿，专业审核后形成正式版本。
+      </p>
     </aside>
   </section>
   <section class="module-section">
-    <h2>围绕学习，连接六个方向</h2>
+    <h2>开始学习与贡献</h2>
+    <ol class="module-list">
+      <li>
+        <RouterLink to="/knowledge">中医药知识中心</RouterLink
+        ><span class="muted">已开放</span>
+      </li>
+      <li>
+        <RouterLink to="/formulas/compare">方剂比较</RouterLink
+        ><span class="muted">已开放</span>
+      </li>
+      <li>
+        <RouterLink to="/contribute">资料与知识贡献</RouterLink
+        ><span class="muted">需贡献资格</span>
+      </li>
+      <li v-if="session.user?.permissions.includes('knowledge:review')">
+        <RouterLink to="/reviews">专业审核</RouterLink
+        ><span class="muted">审核工作台</span>
+      </li>
+    </ol>
+    <h2 style="margin-top: 40px">后续开放</h2>
     <ol class="module-list">
       <li v-for="name in modules" :key="name">
-        <span>{{ name }}</span
-        ><span class="muted">尚未开放</span>
+        <span>{{ name }}</span><span class="muted">尚未开放</span>
       </li>
     </ol>
   </section>

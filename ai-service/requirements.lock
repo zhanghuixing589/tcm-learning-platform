@@ -72,3 +72,5 @@ typing-inspection==0.4.5
     #   pydantic-settings
 uvicorn==0.54.0
     # via -r ai-service/requirements.in
+defusedxml==0.7.1
+pypdf==6.21.4

@@ -3,3 +3,5 @@ pydantic-settings>=2.6,<3
 uvicorn>=0.32,<1
 httpx>=0.28,<1
 pytest>=8,<10
+pypdf>=6.21.4,<7
+defusedxml>=0.7,<1
