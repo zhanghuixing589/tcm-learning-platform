@@ -360,6 +360,11 @@
           "comment": "到期"
         },
         {
+          "name": "absolute_expires_at",
+          "definition": "DATETIME(3) NOT NULL",
+          "comment": "登录会话绝对到期UTC，轮换时继承；V3新增"
+        },
+        {
           "name": "revoked_at",
           "definition": "DATETIME(3) NULL",
           "comment": "撤销"
@@ -397,7 +402,7 @@
           "replaced_by_id"
         ]
       ],
-      "checks": []
+      "checks": ["expires_at <= absolute_expires_at"]
     },
     {
       "name": "file_objects",

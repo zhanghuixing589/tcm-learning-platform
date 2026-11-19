@@ -23,7 +23,7 @@ class IdentityIntegrationTest {
     @Autowired ObjectMapper json;
     @Autowired JdbcTemplate db;
     private static final String ORIGIN = "http://localhost:5173";
-    private static final String PASSWORD = "Test-password-891!";
+    private static final String PASSWORD = "TestPass891!";
     record Login(String id, String access, Cookie refresh) {}
 
     private Login register() throws Exception {
@@ -77,6 +77,24 @@ class IdentityIntegrationTest {
         mvc.perform(post("/api/v1/auth/login").contentType("application/json")
                 .content(json.writeValueAsString(Map.of("username",username,"password","incorrect")))).andExpect(status().isUnauthorized());
     }
+    @Test void registrationPasswordPolicyIsEnforcedByHttpWithoutCreatingInvalidAccounts() throws Exception {
+        String username="policy_"+UUID.randomUUID().toString().replace("-","").substring(0,15);
+        for(String password:new String[]{"Abcdefg12","Abcdefghijk1!","abcdefgh12","Abcdefghij","Abcdef12中文","Abcdef12 !","Abcdefgh１!"}) {
+            mvc.perform(post("/api/v1/auth/register").contentType("application/json")
+                    .content(json.writeValueAsString(Map.of("username",username,"password",password,"nickname","学习者"))))
+                    .andExpect(status().isBadRequest());
+        }
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM sys_users WHERE username=?",Integer.class,username)).isZero();
+        for(String password:new String[]{"Abcdefgh12","Abcdefghij1!"}) {
+            String validName=username+password.length();
+            mvc.perform(post("/api/v1/auth/register").contentType("application/json")
+                    .content(json.writeValueAsString(Map.of("username",validName,"password",password,"nickname","学习者"))))
+                    .andExpect(status().isCreated());
+            mvc.perform(post("/api/v1/auth/login").contentType("application/json")
+                    .content(json.writeValueAsString(Map.of("username",validName,"password",password))))
+                    .andExpect(status().isOk());
+        }
+    }
     @Test void refreshRotatesAndReplayRevokesTheWholeFamily() throws Exception {
         Login u=register();
         MvcResult next=refresh(u.refresh());
@@ -87,6 +105,43 @@ class IdentityIntegrationTest {
         assertThat(refresh(replacement).getResponse().getStatus()).isEqualTo(401);
         mvc.perform(get("/api/v1/me").header("Authorization","Bearer "+u.access())).andExpect(status().isUnauthorized());
         assertThat(db.queryForObject("SELECT COUNT(*) FROM auth_refresh_tokens WHERE user_id=? AND revoked_at IS NULL",Integer.class,u.id())).isZero();
+    }
+    @Test void sessionDeadlineIsThirtyDaysAndNeverMovesDuringRotation() throws Exception {
+        Login u=register();
+        var deadline=db.queryForObject("SELECT absolute_expires_at FROM auth_refresh_tokens WHERE user_id=?",java.sql.Timestamp.class,u.id());
+        assertThat(deadline.toInstant()).isBetween(java.time.Instant.now().plusSeconds(30L*86400-10),java.time.Instant.now().plusSeconds(30L*86400));
+        Cookie cookie=u.refresh();
+        for(int i=0;i<2;i++) {
+            MvcResult r=refresh(cookie);
+            assertThat(r.getResponse().getStatus()).isEqualTo(200);
+            cookie=r.getResponse().getCookie("tcm_refresh");
+        }
+        assertThat(db.queryForList("SELECT DISTINCT absolute_expires_at FROM auth_refresh_tokens WHERE user_id=?",java.sql.Timestamp.class,u.id())).containsExactly(deadline);
+    }
+    @Test void nearDeadlineCapsRefreshCookieAndAccessJwt() throws Exception {
+        Login u=register();
+        db.update("UPDATE auth_refresh_tokens SET absolute_expires_at=UTC_TIMESTAMP(3)+INTERVAL 45 SECOND,expires_at=UTC_TIMESTAMP(3)+INTERVAL 45 SECOND WHERE user_id=?",u.id());
+        var deadline=db.queryForObject("SELECT absolute_expires_at FROM auth_refresh_tokens WHERE user_id=?",java.sql.Timestamp.class,u.id()).toInstant();
+        MvcResult r=refresh(u.refresh());
+        assertThat(r.getResponse().getStatus()).isEqualTo(200);
+        assertThat(r.getResponse().getCookie("tcm_refresh").getMaxAge()).isBetween(1,45);
+        JsonNode data=json.readTree(r.getResponse().getContentAsString()).path("data");
+        assertThat(data.path("expiresIn").asLong()).isBetween(1L,45L);
+        JsonNode jwt=json.readTree(java.util.Base64.getUrlDecoder().decode(data.path("accessToken").asText().split("\\.")[1]));
+        assertThat(java.time.Instant.ofEpochSecond(jwt.path("exp").asLong())).isBeforeOrEqualTo(deadline);
+        assertThat(db.queryForList("SELECT expires_at FROM auth_refresh_tokens WHERE user_id=?",java.sql.Timestamp.class,u.id())).allSatisfy(t->assertThat(t.toInstant()).isBeforeOrEqualTo(deadline));
+    }
+    @Test void absoluteDeadlineRejectsBothRefreshAndExistingAccessAndAllowsNewLogin() throws Exception {
+        Login u=register();
+        db.update("UPDATE auth_refresh_tokens SET expires_at=UTC_TIMESTAMP(3)-INTERVAL 1 SECOND,absolute_expires_at=UTC_TIMESTAMP(3)-INTERVAL 1 SECOND WHERE user_id=?",u.id());
+        mvc.perform(get("/api/v1/me").header("Authorization","Bearer "+u.access())).andExpect(status().isUnauthorized());
+        MvcResult r=refresh(u.refresh());
+        assertThat(r.getResponse().getStatus()).isEqualTo(401);
+        assertThat(r.getResponse().getCookie("tcm_refresh").getMaxAge()).isZero();
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM auth_refresh_tokens WHERE user_id=? AND revoked_at IS NULL",Integer.class,u.id())).isZero();
+        String name=db.queryForObject("SELECT username FROM sys_users WHERE id=?",String.class,u.id());
+        Login renewed=login(name);
+        mvc.perform(get("/api/v1/me").header("Authorization","Bearer "+renewed.access())).andExpect(status().isOk());
     }
     @Test void refreshRequiresTrustedOriginAndCsrfHeader() throws Exception {
         Login u=register();
@@ -143,8 +198,8 @@ class IdentityIntegrationTest {
         assertThat(refresh(u.refresh()).getResponse().getStatus()).isEqualTo(401);
     }
     @Test void flywayCreatedCompleteSchemaAndPaginationRejectsOversizedRequests() throws Exception {
-        assertThat(db.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name <> 'flyway_schema_history'",Integer.class)).isEqualTo(69);
-        assertThat(db.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1",Integer.class)).isEqualTo(2);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name <> 'flyway_schema_history'",Integer.class)).isEqualTo(70);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1",Integer.class)).isEqualTo(4);
         Login a=admin();
         mvc.perform(get("/api/v1/admin/users?pageSize=101").header("Authorization","Bearer "+a.access())).andExpect(status().isBadRequest());
     }

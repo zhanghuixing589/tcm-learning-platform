@@ -8,7 +8,11 @@ export default defineConfig({
     vue(),
     Components({
       dts: "src/components.d.ts",
-      resolvers: [ElementPlusResolver({ importStyle: "css" })],
+      resolvers: [
+        ElementPlusResolver({
+          importStyle: process.env.VITEST ? false : "css",
+        }),
+      ],
     }),
   ],
   // Lazy routes receive injected component imports after Vite's initial scan.

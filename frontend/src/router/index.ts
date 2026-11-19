@@ -34,6 +34,32 @@ export const router = createRouter({
           meta: { requiresAuth: true, title: "个人中心" },
         },
         {
+          path: "account/settings",
+          component: () => import("../modules/account/AccountSettingsView.vue"),
+          meta: { requiresAuth: true, title: "编辑个人资料" },
+        },
+        {
+          path: "account/posts/:articleId",
+          name: "own-post",
+          component: () => import("../modules/account/ArticleEditorView.vue"),
+          meta: { requiresAuth: true, title: "帖子详情" },
+        },
+        {
+          path: "account/articles/:articleId",
+          component: () => import("../modules/account/ArticleEditorView.vue"),
+          meta: { requiresAuth: true, title: "发表内容" },
+        },
+        {
+          path: "users/:userId",
+          component: () => import("../modules/account/PublicProfileView.vue"),
+          meta: { requiresAuth: true, title: "用户主页" },
+        },
+        {
+          path: "resources/:resourceId",
+          component: () => import("../modules/account/ResourceView.vue"),
+          meta: { requiresAuth: true, title: "内容详情" },
+        },
+        {
           path: "applications",
           component: () => import("../modules/account/ApplicationsView.vue"),
           meta: { requiresAuth: true, title: "贡献资格" },

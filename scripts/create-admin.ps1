@@ -3,7 +3,7 @@ $ErrorActionPreference='Stop'
 $projectRoot=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'Import-DevEnvironment.ps1')
 if (!$Username) { $Username=Read-Host 'New administrator username' }
-$securePassword=Read-Host 'Password (at least 10 characters)' -AsSecureString
+$securePassword=Read-Host 'Password (10-12 ASCII characters, uppercase + lowercase + digit or symbol)' -AsSecureString
 $pointer=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
 try {
     $env:BOOTSTRAP_ADMIN_USERNAME=$Username

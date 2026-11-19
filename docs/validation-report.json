@@ -10,6 +10,35 @@
       "passed": true
     },
     {
+      "name": "seed creates no users before upgrade",
+      "passed": true
+    },
+    {
+      "name": "execute V3__session_absolute_expiration.sql",
+      "passed": true
+    },
+    {
+      "name": "legacy family anchored to earliest login",
+      "passed": true
+    },
+    {
+      "name": "expired legacy family revoked",
+      "passed": true
+    },
+    {
+      "name": "legacy deadline equals first login plus thirty days",
+      "passed": true
+    },
+    {
+      "name": "recent legacy family remains active with capped refresh",
+      "passed": true
+    },
+    {
+      "name": "refresh cannot exceed absolute deadline",
+      "passed": true,
+      "expected_mysql_error": 3819
+    },
+    {
       "name": "all designed tables created",
       "passed": true
     },
@@ -134,7 +163,7 @@
       "passed": true
     }
   ],
-  "scratch": "C:\\Users\\86150\\Documents\\Codex\\2026-10-22\\new-chat\\work\\architecture-design\\mysql-47619b48fc",
+  "scratch": "D:\\code\\IdeaProjects\\tcm-learning-platform\\runtime\\schema-validation\\mysql-660e45ccc0",
   "server_stopped": true,
   "mysql_version": "8.0.42"
 }

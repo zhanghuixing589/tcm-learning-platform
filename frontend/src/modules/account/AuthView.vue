@@ -4,6 +4,13 @@ import { useRoute, useRouter } from "vue-router";
 import { api, errorMessage } from "../../shared/api/client";
 import { useSessionStore } from "../../shared/stores/session";
 import { safeRedirect } from "../../router/access";
+import {
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  REGISTRATION_PASSWORD_PATTERN,
+  REGISTRATION_PASSWORD_MESSAGE,
+  isValidRegistrationPassword,
+} from "./passwordPolicy";
 const props = defineProps<{ register: boolean }>();
 const route = useRoute(),
   router = useRouter(),
@@ -20,6 +27,10 @@ watch(
 );
 async function submit() {
   error.value = "";
+  if (props.register && !isValidRegistrationPassword(form.password)) {
+    error.value = REGISTRATION_PASSWORD_MESSAGE;
+    return;
+  }
   busy.value = true;
   try {
     if (props.register) {
@@ -83,11 +94,18 @@ async function submit() {
           type="password"
           show-password
           :autocomplete="register ? 'new-password' : 'current-password'"
-          :minlength="register ? 10 : 1"
-          maxlength="72"
+          :minlength="register ? PASSWORD_MIN_LENGTH : 1"
+          :maxlength="register ? PASSWORD_MAX_LENGTH : 72"
+          :pattern="register ? REGISTRATION_PASSWORD_PATTERN : undefined"
+          :aria-describedby="register ? 'password-hint' : undefined"
           required
-          :placeholder="register ? '至少10位，最多72个UTF-8字节' : '输入密码'"
+          :placeholder="
+            register ? '10–12位，大写、小写及数字或特殊符号' : '输入密码'
+          "
       /></el-form-item>
+      <p v-if="register" id="password-hint" class="muted">
+        {{ REGISTRATION_PASSWORD_MESSAGE }}
+      </p>
       <el-button
         type="primary"
         native-type="submit"

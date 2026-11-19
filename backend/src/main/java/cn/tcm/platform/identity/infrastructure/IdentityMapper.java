@@ -21,13 +21,13 @@ public interface IdentityMapper extends BaseMapper<UserAccount> {
     @Update("UPDATE sys_users SET status=#{status},credential_version=credential_version+1 WHERE id=#{id}") void status(@Param("id")long id,@Param("status")String status);
     @Select("SELECT * FROM auth_refresh_tokens WHERE token_hash=#{hash}") RefreshToken token(String hash);
     @Select("SELECT * FROM auth_refresh_tokens WHERE token_hash=#{hash} FOR UPDATE") RefreshToken lockToken(String hash);
-    @Insert("INSERT INTO auth_refresh_tokens(user_id,token_hash,family_key,expires_at) VALUES(#{userId},#{tokenHash},#{familyKey},#{expiresAt})")
+    @Insert("INSERT INTO auth_refresh_tokens(user_id,token_hash,family_key,expires_at,absolute_expires_at) VALUES(#{userId},#{tokenHash},#{familyKey},#{expiresAt},#{absoluteExpiresAt})")
     @Options(useGeneratedKeys=true,keyProperty="id") void addToken(RefreshToken token);
     @Update("UPDATE auth_refresh_tokens SET revoked_at=UTC_TIMESTAMP(3),replaced_by_id=#{replacement} WHERE id=#{id}")
     void rotate(@Param("id")long id,@Param("replacement")long replacement);
     @Update("UPDATE auth_refresh_tokens SET revoked_at=COALESCE(revoked_at,UTC_TIMESTAMP(3)) WHERE family_key=#{family}") void revokeFamily(String family);
     @Update("UPDATE auth_refresh_tokens SET revoked_at=COALESCE(revoked_at,UTC_TIMESTAMP(3)) WHERE user_id=#{id}") void revokeUser(long id);
-    @Select("SELECT COUNT(*) FROM auth_refresh_tokens WHERE user_id=#{user} AND family_key=#{family} AND revoked_at IS NULL AND expires_at>UTC_TIMESTAMP(3)")
+    @Select("SELECT COUNT(*) FROM auth_refresh_tokens WHERE user_id=#{user} AND family_key=#{family} AND revoked_at IS NULL AND expires_at>UTC_TIMESTAMP(3) AND absolute_expires_at>UTC_TIMESTAMP(3)")
     int activeFamily(@Param("user")long user,@Param("family")String family);
     @Select("SELECT COUNT(*) FROM sys_role_applications WHERE user_id=#{user} AND role_id=2 AND status='PENDING'") int pending(long user);
     @Insert("INSERT INTO sys_role_applications(user_id,role_id,statement) SELECT #{userId},id,#{statement} FROM sys_roles WHERE code='CONTRIBUTOR'")
