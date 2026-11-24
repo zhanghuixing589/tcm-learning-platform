@@ -34,8 +34,8 @@ public class SecurityConfiguration {
                                        TokenService tokens,ObjectMapper json) throws Exception {
         var cors=new CorsConfiguration();cors.setAllowedOrigins(properties.allowedOrigins());
         cors.setAllowedMethods(List.of("GET","POST","PATCH","PUT","DELETE","OPTIONS"));
-        cors.setAllowedHeaders(List.of("Authorization","Content-Type","X-CSRF-Token"));
-        cors.setExposedHeaders(List.of("X-Trace-Id"));cors.setAllowCredentials(true);
+        cors.setAllowedHeaders(List.of("Authorization","Content-Type","X-CSRF-Token","Idempotency-Key"));
+        cors.setExposedHeaders(List.of("X-Trace-Id","Retry-After"));cors.setAllowCredentials(true);
         var source=new UrlBasedCorsConfigurationSource();source.registerCorsConfiguration("/**",cors);
         http.cors(c->c.configurationSource(source)).csrf(c->c.disable())
                 .sessionManagement(c->c.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -47,12 +47,14 @@ public class SecurityConfiguration {
                         .anyRequest().authenticated())
                 .addFilterBefore(new OncePerRequestFilter() {
                     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain) throws ServletException,IOException {
+                        // origin/CSRF 校验。
                         boolean cookieEndpoint=req.getRequestURI().equals("/api/v1/auth/refresh") || req.getRequestURI().equals("/api/v1/auth/logout");
                         String origin=req.getHeader("Origin");
                         if(!"OPTIONS".equals(req.getMethod()) && (cookieEndpoint && (!"POST".equals(req.getMethod()) || !"1".equals(req.getHeader("X-CSRF-Token")) || !properties.allowedOrigins().contains(origin))
                                 || origin!=null && !properties.allowedOrigins().contains(origin))) {
                             error(json,res,403,"FORBIDDEN","请求来源校验失败");return;
                         }
+                        // JWT 解析与身份验证。
                         String header=req.getHeader("Authorization");
                         if(header!=null) {
                             try {

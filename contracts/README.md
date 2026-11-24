@@ -1,5 +1,11 @@
 # API与服务契约基线
 
+## 第三阶段第一批接口（已实现，整体验收进行中）
+
+社区分区、成员、讨论、版本化评论，以及文章文献/扩容的字段、权限、并发和兼容规则按 [第一批数据库与接口详细设计](../docs/superpowers/specs/2026-11-20-stage-three-batch-one-data-api-design.md) 实现，实际验证见 [本批记录](../docs/11-第三阶段第一批实现与验收.md)。公开讨论路径为 `/posts`，分区为 `/community/sections`；原 `/me/articles` 与资源互动路径保留，文章写入统一检查版本锁、正文额度和文献。创建及显式状态命令需要 `Idempotency-Key`，草稿 PATCH 与 DELETE 按具体契约携带版本锁。
+
+正文格式与文献绑定到版本。`GET /resources/{id}` 保留平铺正文并附加 `community` 正式版元数据，其嵌套正文为空以免重复传输长文；客户端不应为补元数据再读取一次 `/posts/{id}` 而重复计入历史。过期版本命令响应通过 `staleResult` 和可选 `resultRevision` 区分原处理结果与当前 `latestRevision`，客户端须保留未保存输入并要求核对，不能静默覆盖。
+
 ## 第二阶段接口
 
 第二阶段来源资料、解析任务、知识版本、专业审核、知识中心、纠错与方剂比较的具体路径和字段，按 [第二阶段设计](../docs/superpowers/specs/2026-11-19-stage-two-design.md) 实现；当前验收状态见 [第二阶段实际记录](../docs/10-第二阶段实现与验收.md)。来源工作台与知识中心复用现有统一响应、身份与权限；以下表格仍含第三至七阶段的设计契约，不代表全部路由已实现。
@@ -26,7 +32,7 @@ Cookie：tcm_refresh，HttpOnly，SameSite=Strict，Path=/api/v1/auth。refresh/
 | 测验 | POST /assessments/{id}/attempts；PUT /attempts/{id}/answers/{itemId}；POST /attempts/{id}/submit | 仅本人IN_PROGRESS；服务端评分；重交不重复累加 |
 | 错题 | GET /me/wrong-questions；POST /me/wrong-question-practices | 复习形成新作答，不覆盖旧成绩 |
 | 推荐 | GET /recommendations；POST /recommendation-items/{id}/exposures；POST /recommendation-items/{id}/clicks | 真实可见曝光；点击校验归属并幂等 |
-| 社区 | POST/GET /posts；POST /articles；POST /posts/{id}/comments；POST /reports | 讨论与文章策略不同，文章审核后公开 |
+| 社区 | GET/POST /posts；POST /posts/{id}/revisions；POST /me/articles；GET/POST /posts/{id}/comments | 第一批讨论直接公开、文章审核后公开；举报接口属于后续批次 |
 | 共用 | PUT/DELETE /resources/{id}/bookmark；GET /me/notifications | 收藏和点赞重复请求不重复计数 |
 | 运维 | GET /admin/jobs；POST /admin/jobs/{id}/retries；GET /admin/audit-logs | 只允许技术管理权限，日志脱敏 |
 

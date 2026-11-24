@@ -21,6 +21,18 @@ const session = useSessionStore();
           to="/admin/jobs"
           >技术任务</RouterLink
         ><RouterLink
+          v-if="session.user?.permissions.includes('community:section:manage')"
+          to="/admin/community/sections"
+          >分区管理</RouterLink
+        ><RouterLink
+          v-if="session.user?.permissions.includes('community:quota:manage')"
+          to="/admin/community/quotas"
+          >正文扩容审批</RouterLink
+        ><RouterLink
+          v-if="session.user?.permissions.includes('community:section:manage')"
+          to="/admin/community/policies"
+          >社区文本政策</RouterLink
+        ><RouterLink
           v-if="
             session.user?.permissions.some((p) =>
               ['knowledge:review', 'community:moderate'].includes(p),

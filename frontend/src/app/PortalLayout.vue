@@ -14,6 +14,7 @@ const session = useSessionStore();
     <nav aria-label="主要导航">
       <RouterLink to="/">学习门户</RouterLink>
       <RouterLink to="/knowledge">知识中心</RouterLink>
+      <RouterLink to="/community">科普社区</RouterLink>
       <template v-if="session.user"
         ><RouterLink to="/account">个人中心</RouterLink
         ><RouterLink to="/applications">贡献资格</RouterLink
@@ -31,7 +32,8 @@ const session = useSessionStore();
           to="/admin/jobs"
           >技术任务</RouterLink
         ><RouterLink
-          v-if="session.user.permissions.includes('system:user:manage')"
+          v-if="session.user.permissions.some((permission) =>
+            ['system:user:manage', 'community:section:manage', 'community:quota:manage'].includes(permission))"
           to="/admin"
           >管理后台</RouterLink
         ></template

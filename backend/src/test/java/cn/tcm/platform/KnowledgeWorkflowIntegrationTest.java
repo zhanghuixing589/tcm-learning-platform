@@ -199,7 +199,11 @@ class KnowledgeWorkflowIntegrationTest {
     @Test void professionalAndCommunityReviewPermissionsStaySeparate() throws Exception {
         User author=user("CONTRIBUTOR"),professional=user("LEARNER"),community=user("LEARNER");
         for(var permission:List.of(Map.entry(professional,"knowledge:review"),Map.entry(community,"community:moderate"))){String code="TEST_"+UUID.randomUUID().toString().replace("-","").substring(0,20);db.update("INSERT INTO sys_roles(code,name) VALUES(?,?)",code,"隔离测试角色");long role=db.queryForObject("SELECT id FROM sys_roles WHERE code=?",Long.class,code);db.update("INSERT INTO sys_role_permissions(role_id,permission_id) SELECT ?,id FROM sys_permissions WHERE code=?",role,permission.getValue());db.update("INSERT INTO sys_user_roles(user_id,role_id) VALUES(?,?)",permission.getKey().id(),role);}
-        JsonNode article=call(author,post("/api/v1/me/articles"),Map.of("title","社区稿","body","社区稿件正文"),201);call(author,post("/api/v1/me/articles/"+article.path("id").asText()+"/submit"),null,200);
+        String section=db.queryForObject("SELECT id FROM community_sections WHERE code='study'",String.class);
+        JsonNode article=call(author,post("/api/v1/me/articles").header("Idempotency-Key",UUID.randomUUID().toString()),
+                Map.of("title","社区稿","body","社区稿件正文","sectionId",section),201);
+        call(author,post("/api/v1/me/articles/"+article.path("id").asText()+"/submit").header("Idempotency-Key",UUID.randomUUID().toString()),
+                Map.of("baseRevisionId",article.path("revisionId").asText(),"lockVersion",article.path("lockVersion").asInt()),200);
         String articleTask=db.queryForObject("SELECT t.id FROM review_tasks t JOIN content_revisions v ON v.id=t.revision_id WHERE v.resource_id=?",String.class,article.path("id").asText());
         call(professional,get("/api/v1/reviews/"+articleTask),null,403);
         call(community,post("/api/v1/reviews/"+articleTask+"/decisions"),Map.of("lockVersion",0,"decision","APPROVED","note","社区内容审核"),200);

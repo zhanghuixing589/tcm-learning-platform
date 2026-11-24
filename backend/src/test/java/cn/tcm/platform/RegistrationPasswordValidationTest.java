@@ -38,7 +38,8 @@ class RegistrationPasswordValidationTest {
     @ValueSource(strings={"Abcdefg12","Abcdefghijk1!","abcdefgh12","Abcdef12中文","Abcdef12 !"})
     void directServiceCallsRejectInvalidPasswordBeforeAccessingDatabase(String password) {
         IdentityMapper mapper=mock(IdentityMapper.class);
-        var service=new IdentityService(mapper,mock(PasswordEncoder.class),mock(TokenService.class),mock(SecurityProperties.class),java.time.Clock.systemUTC());
+        var service=new IdentityService(mapper,mock(PasswordEncoder.class),mock(TokenService.class),mock(SecurityProperties.class),java.time.Clock.systemUTC(),
+                mock(cn.tcm.platform.community.infrastructure.CommunitySectionRepository.class));
         assertThatThrownBy(()->service.register(new IdentityDtos.Register("learner",password,"学习者")))
                 .isInstanceOfSatisfying(ApiException.class,e->assertThat(e.status).isEqualTo(400));
         verifyNoInteractions(mapper);

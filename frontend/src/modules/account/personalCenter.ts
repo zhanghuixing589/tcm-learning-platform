@@ -1,4 +1,5 @@
 import type { LocationQuery } from "vue-router";
+import type { Post, Reference, SectionRef, SourceFormat } from "../community/types";
 
 export const sections = [
   "bookmarks",
@@ -55,6 +56,11 @@ export interface ResourceDetail extends ContentItem {
   body: string;
   liked: boolean;
   bookmarked: boolean;
+  community?: Post | null;
+  sourceFormat?: SourceFormat;
+  formatPolicyId?: string | null;
+  references?: Reference[];
+  section?: SectionRef | null;
 }
 export const typeLabels: Record<string, string> = {
   KNOWLEDGE: "知识条目",

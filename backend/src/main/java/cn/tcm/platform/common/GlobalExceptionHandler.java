@@ -12,19 +12,23 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final Logger LOG=LoggerFactory.getLogger(GlobalExceptionHandler.class);
     @ExceptionHandler(ApiException.class)
-    ResponseEntity<?> api(ApiException e) { return ResponseEntity.status(e.status).body(ApiResponse.error(e.code,e.getMessage())); }
+    ResponseEntity<?> api(ApiException e) { var response=ResponseEntity.status(e.status); if(e instanceof cn.tcm.platform.community.application.CommunityRateLimitException rate)response.header("Retry-After",Long.toString(rate.retryAfterSeconds()));return response.body(ApiResponse.error(e.code,e.getMessage())); }
     @ExceptionHandler({MethodArgumentNotValidException.class,ConstraintViolationException.class,
-            HttpMessageNotReadableException.class,HandlerMethodValidationException.class,MethodArgumentTypeMismatchException.class})
+            HttpMessageNotReadableException.class,HandlerMethodValidationException.class,MethodArgumentTypeMismatchException.class,org.springframework.web.bind.ServletRequestBindingException.class})
     ResponseEntity<?> validation(Exception e) { return ResponseEntity.badRequest().body(ApiResponse.error("VALIDATION_ERROR","请求内容不符合要求，请检查字段和长度")); }
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<?> integrity(Exception e) { return ResponseEntity.status(409).body(ApiResponse.error("STATE_CONFLICT","记录已存在或状态冲突")); }
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<?> forbidden(Exception e) { return ResponseEntity.status(403).body(ApiResponse.error("FORBIDDEN","没有执行此操作的权限")); }
+    @ExceptionHandler({NoResourceFoundException.class,NoHandlerFoundException.class})
+    ResponseEntity<?> missing(Exception e) { return api(ApiException.missing()); }
     @ExceptionHandler(Exception.class)
     ResponseEntity<?> unexpected(Exception e) {
         LOG.error("Unhandled request error type={}",e.getClass().getSimpleName());

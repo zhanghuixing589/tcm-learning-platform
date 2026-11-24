@@ -160,8 +160,8 @@ test("real collection pagination, resource interactions and article revisions wo
   await expect(page.locator(".content-entry")).toHaveCount(1);
   await page.getByRole("button", { name: "清空记录", exact: true }).click();
   await page
+    .locator(".el-popconfirm")
     .getByRole("button", { name: "清空记录", exact: true })
-    .last()
     .click();
   await expect(page.getByText("还没有浏览记录", { exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "我的发表", exact: true }).click();
@@ -170,6 +170,10 @@ test("real collection pagination, resource interactions and article revisions wo
   await page
     .getByLabel("正文", { exact: true })
     .fill("浏览器验收草稿，来源为本人的学习记录，不作为医学建议。");
+  await page.getByRole("button", { name: "保存草稿", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveText("草稿已保存");
+  await expect(page.getByText("提交审核前，请选择可投稿的分区并保存。")).toBeVisible();
+  await page.locator("#article-section").selectOption({ label: `浏览器验收科普分区 ${reader}` });
   await page.getByRole("button", { name: "保存草稿", exact: true }).click();
   await expect(page.getByRole("status")).toHaveText("草稿已保存");
   await page.getByRole("button", { name: "提交审核", exact: true }).click();

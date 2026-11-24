@@ -2,6 +2,8 @@ package cn.tcm.platform.account.api;
 
 import cn.tcm.platform.account.application.*;
 import cn.tcm.platform.common.ApiResponse;
+import cn.tcm.platform.community.application.CommunityArticleService;
+import cn.tcm.platform.community.api.CommunityArticleDtos.RevisionLock;
 import jakarta.validation.Valid;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +14,12 @@ import java.security.Principal;
 public class PersonalCenterController {
     private final PersonalCenterService service;
     private final AvatarService avatars;
-    public PersonalCenterController(PersonalCenterService service,AvatarService avatars) {this.service=service;this.avatars=avatars;}
+    private final CommunityArticleService articles;
+    public PersonalCenterController(PersonalCenterService service, AvatarService avatars, CommunityArticleService articles) {
+        this.service = service;
+        this.avatars = avatars;
+        this.articles = articles;
+    }
     private static long id(Principal principal) {return Long.parseLong(principal.getName());}
     @GetMapping("/me/profile-summary") public ApiResponse<?> summary(Principal p){return ApiResponse.ok(service.summary(id(p),id(p)));}
     @GetMapping("/users/{userId}/profile") public ApiResponse<?> profile(Principal p,@PathVariable long userId){return ApiResponse.ok(service.summary(id(p),userId));}
@@ -29,14 +36,43 @@ public class PersonalCenterController {
     @PutMapping("/resources/{resourceId}/{kind:bookmark|like}") public ApiResponse<?> interact(Principal p,@PathVariable long resourceId,@PathVariable String kind){return ApiResponse.ok(service.interaction(id(p),resourceId,kind.equals("bookmark"),true));}
     @DeleteMapping("/resources/{resourceId}/{kind:bookmark|like}") public ApiResponse<?> removeInteraction(Principal p,@PathVariable long resourceId,@PathVariable String kind){return ApiResponse.ok(service.interaction(id(p),resourceId,kind.equals("bookmark"),false));}
     @PostMapping("/me/articles") @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<?> create(Principal p,@Valid @RequestBody PersonalCenterDtos.ArticleInput input){return ApiResponse.ok(service.createArticle(id(p),input));}
-    @GetMapping("/me/articles/{resourceId}") public ApiResponse<?> article(Principal p,@PathVariable long resourceId){return ApiResponse.ok(service.article(id(p),resourceId));}
-    @GetMapping("/me/publications/{resourceId}") public ApiResponse<?> publication(Principal p,@PathVariable long resourceId){return ApiResponse.ok(service.publication(id(p),resourceId));}
-    @PatchMapping("/me/articles/{resourceId}") public ApiResponse<?> update(Principal p,@PathVariable long resourceId,@Valid @RequestBody PersonalCenterDtos.ArticleInput input){return ApiResponse.ok(service.updateArticle(id(p),resourceId,input));}
-    @DeleteMapping("/me/articles/{resourceId}") public ApiResponse<?> delete(Principal p,@PathVariable long resourceId){service.deleteArticle(id(p),resourceId);return ApiResponse.ok(null);}
-    @PostMapping("/me/articles/{resourceId}/submit") public ApiResponse<?> submit(Principal p,@PathVariable long resourceId){return ApiResponse.ok(service.submitArticle(id(p),resourceId));}
-    @PostMapping("/me/articles/{resourceId}/withdraw") public ApiResponse<?> withdraw(Principal p,@PathVariable long resourceId){return ApiResponse.ok(service.withdrawArticle(id(p),resourceId));}
-    @PostMapping("/me/articles/{resourceId}/revise") public ApiResponse<?> revise(Principal p,@PathVariable long resourceId){return ApiResponse.ok(service.reviseArticle(id(p),resourceId));}
+    public ApiResponse<?> create(Principal p, @RequestHeader("Idempotency-Key") String key,
+                                 @RequestBody PersonalCenterDtos.ArticleInput input) {
+        return ApiResponse.ok(articles.create(id(p), key, input));
+    }
+    @GetMapping("/me/articles/{resourceId}")
+    public ApiResponse<?> article(Principal p, @PathVariable long resourceId) {
+        return ApiResponse.ok(articles.own(id(p), resourceId));
+    }
+    @GetMapping("/me/publications/{resourceId}")
+    public ApiResponse<?> publication(Principal p, @PathVariable long resourceId) {
+        return ApiResponse.ok(service.publication(id(p), resourceId));
+    }
+    @PatchMapping("/me/articles/{resourceId}")
+    public ApiResponse<?> update(Principal p, @PathVariable long resourceId, @RequestBody PersonalCenterDtos.ArticleInput input) {
+        return ApiResponse.ok(articles.update(id(p), resourceId, input));
+    }
+    @DeleteMapping("/me/articles/{resourceId}")
+    public ApiResponse<?> delete(Principal p, @PathVariable long resourceId, @RequestParam(required = false) String baseRevisionId,
+                                 @RequestParam(required = false) Integer lockVersion) {
+        articles.delete(id(p), resourceId, baseRevisionId, lockVersion);
+        return ApiResponse.ok(null);
+    }
+    @PostMapping("/me/articles/{resourceId}/submit")
+    public ApiResponse<?> submit(Principal p, @PathVariable long resourceId, @RequestHeader("Idempotency-Key") String key,
+                                 @Valid @RequestBody RevisionLock input) {
+        return ApiResponse.ok(articles.submit(id(p), resourceId, key, input));
+    }
+    @PostMapping("/me/articles/{resourceId}/withdraw")
+    public ApiResponse<?> withdraw(Principal p, @PathVariable long resourceId, @RequestHeader("Idempotency-Key") String key,
+                                   @Valid @RequestBody RevisionLock input) {
+        return ApiResponse.ok(articles.withdraw(id(p), resourceId, key, input));
+    }
+    @PostMapping("/me/articles/{resourceId}/revise")
+    public ApiResponse<?> revise(Principal p, @PathVariable long resourceId, @RequestHeader("Idempotency-Key") String key,
+                                 @Valid @RequestBody RevisionLock input) {
+        return ApiResponse.ok(articles.revise(id(p), resourceId, key, input));
+    }
     @PostMapping("/me/avatar") public ApiResponse<?> upload(Principal p,@RequestParam("file")MultipartFile file){return ApiResponse.ok(avatars.upload(id(p),file));}
     @GetMapping("/users/{userId}/avatar") public ResponseEntity<byte[]> avatar(@PathVariable long userId){return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).header("X-Content-Type-Options","nosniff").header("Cache-Control","private, no-cache").body(avatars.read(userId));}
 }

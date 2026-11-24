@@ -1,5 +1,6 @@
 import { api } from "../../shared/api/client";
 import type { Envelope, Page } from "../../shared/api/types";
+import type { Reference, SectionRef, SourceFormat } from "../community/types";
 
 export const typeLabels = {
   CONCEPT: "中医概念",
@@ -210,6 +211,13 @@ export interface ReviewDetail extends Review {
     title: string;
     body: string;
     revisionState: string;
+    section: SectionRef | null;
+    sectionId: string | null;
+    sourceFormat: SourceFormat;
+    formatPolicyId: string | null;
+    sourceHash: string;
+    references: Reference[];
+    versionNo: number;
   };
   events: ReviewEvent[];
 }

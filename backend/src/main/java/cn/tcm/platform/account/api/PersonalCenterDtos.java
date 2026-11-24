@@ -1,7 +1,6 @@
 package cn.tcm.platform.account.api;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import cn.tcm.platform.community.application.CommunityReference;
 import java.util.List;
 
 public final class PersonalCenterDtos {
@@ -12,5 +11,6 @@ public final class PersonalCenterDtos {
     public record ContentItem(String id,String resourceType,String title,String summary,boolean available,String occurredAt,
                               String ownerId,String ownerNickname,String sourceName,String visibilityStatus,String revisionState,String revisionId,
                               long likeCount,long bookmarkCount) {}
-    public record ArticleInput(@NotBlank @Size(max=255) String title,@NotBlank @Size(max=100000) String body) {}
+    public record ArticleInput(String title, String body, String sourceFormat, String sectionId,
+                               List<CommunityReference> references, String baseRevisionId, Integer lockVersion) {}
 }

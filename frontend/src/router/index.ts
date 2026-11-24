@@ -41,8 +41,8 @@ export const router = createRouter({
         {
           path: "account/posts/:articleId",
           name: "own-post",
-          component: () => import("../modules/account/ArticleEditorView.vue"),
-          meta: { requiresAuth: true, title: "帖子详情" },
+          component: () => import("../modules/community/DiscussionEditorView.vue"),
+          meta: { requiresAuth: true, title: "我的讨论" },
         },
         {
           path: "account/articles/:articleId",
@@ -58,6 +58,26 @@ export const router = createRouter({
           path: "resources/:resourceId",
           component: () => import("../modules/account/ResourceView.vue"),
           meta: { requiresAuth: true, title: "内容详情" },
+        },
+        {
+          path: "community",
+          component: () => import("../modules/community/CommunityListView.vue"),
+          meta: { requiresAuth: true, title: "科普社区" },
+        },
+        {
+          path: "community/sections/:sectionId",
+          component: () => import("../modules/community/CommunitySectionView.vue"),
+          meta: { requiresAuth: true, title: "社区分区" },
+        },
+        {
+          path: "community/posts/new",
+          component: () => import("../modules/community/DiscussionEditorView.vue"),
+          meta: { requiresAuth: true, permission: "community:post", title: "发布讨论" },
+        },
+        {
+          path: "community/posts/:resourceId",
+          component: () => import("../modules/community/CommunityDetailView.vue"),
+          meta: { requiresAuth: true, title: "社区内容" },
         },
         {
           path: "applications",
@@ -162,7 +182,6 @@ export const router = createRouter({
       component: AdminLayout,
       meta: { requiresAuth: true },
       children: [
-        { path: "", redirect: "/admin/applications" },
         {
           path: "applications",
           component: () => import("../modules/admin/AdminApplicationsView.vue"),
@@ -178,6 +197,21 @@ export const router = createRouter({
           component: () => import("../modules/knowledge/JobsView.vue"),
           meta: { permission: "system:job:manage", title: "技术任务" },
         },
+        {
+          path: "community/sections",
+          component: () => import("../modules/community/CommunitySectionsAdminView.vue"),
+          meta: { permission: "community:section:manage", title: "分区管理" },
+        },
+        {
+          path: "community/quotas",
+          component: () => import("../modules/community/CommunityQuotasAdminView.vue"),
+          meta: { permission: "community:quota:manage", title: "正文扩容审批" },
+        },
+        {
+          path: "community/policies",
+          component: () => import("../modules/community/CommunityPoliciesAdminView.vue"),
+          meta: { permission: "community:section:manage", title: "社区文本政策" },
+        },
       ],
     },
   ],
@@ -189,6 +223,14 @@ router.beforeEach(async (to) => {
     return session.user
       ? "/forbidden"
       : { path: "/login", query: { redirect: to.fullPath } };
+  if (to.path === "/admin" || to.path === "/admin/") {
+    const permissions = session.user?.permissions ?? [];
+    if (permissions.includes("system:user:manage")) return "/admin/applications";
+    if (permissions.includes("community:section:manage")) return "/admin/community/sections";
+    if (permissions.includes("community:quota:manage")) return "/admin/community/quotas";
+    if (permissions.includes("system:job:manage")) return "/admin/jobs";
+    return "/forbidden";
+  }
   return true;
 });
 router.afterEach((to) => {

@@ -1,11 +1,13 @@
 package cn.tcm.platform.identity.application;
 //应用服务
 import cn.tcm.platform.common.*;
+import cn.tcm.platform.community.infrastructure.CommunitySectionRepository;
 import cn.tcm.platform.identity.api.IdentityDtos.*;
 import cn.tcm.platform.identity.domain.*;
 import cn.tcm.platform.identity.infrastructure.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -23,11 +25,13 @@ public class IdentityService {
     private final TokenService tokens; //令牌服务
     private final SecurityProperties properties; //安全属性
     private final Clock clock;
+    private final CommunitySectionRepository community;
     private final String unknownUserHash; //未知用户哈希
     public record Issued(AuthView body,String refresh,long refreshMaxAgeSeconds) {}
-    public IdentityService(IdentityMapper mapper,PasswordEncoder passwords,TokenService tokens,SecurityProperties properties,Clock clock) {
+    public IdentityService(IdentityMapper mapper,PasswordEncoder passwords,TokenService tokens,SecurityProperties properties,Clock clock,CommunitySectionRepository community) {
         this.mapper=mapper;this.passwords=passwords;this.tokens=tokens;this.properties=properties;
         this.clock=clock;
+        this.community=community;
         this.unknownUserHash=passwords.encode(UUID.randomUUID().toString());
     }
 //    把LocalDateTime转换为UTC字符串，如果为null则返回null 这样避免time的空指针 补全时区信息
@@ -119,19 +123,34 @@ public class IdentityService {
     }
     @Transactional public UserView status(long actor,long id,Status input) {
         if(actor==id) throw ApiException.conflict("不能在此禁用自己的账号");
-        UserAccount user=mapper.lockUser(id);if(user==null)throw ApiException.missing();
-        if(!input.status().equals(user.status)) {mapper.status(id,input.status());mapper.revokeUser(id);audit(actor,"USER_STATUS_CHANGED","USER",id);}
+        UserAccount user=lockManagementTarget(actor,id,"system:user:manage");
+        if(!input.status().equals(user.status)) {
+            if("DISABLED".equals(input.status())) community.removeDisabledAccount(actor,id);
+            mapper.status(id,input.status());
+            mapper.revokeUser(id);
+            audit(actor,"USER_STATUS_CHANGED","USER",id);
+        }
         return me(id);
 //    角色修改
     }
     @Transactional public UserView roles(long actor,long id,Roles input) {
         if(actor==id)throw ApiException.conflict("不能在此修改自己的管理角色");
-        if(mapper.lockUser(id)==null)throw ApiException.missing();
+        lockManagementTarget(actor,id,"system:role:manage");
         mapper.clearRoles(id);mapper.grant(id,"LEARNER",actor);
         for(String code:input.roles())mapper.grant(id,code,actor);
 //    角色申请
         audit(actor,"USER_ROLES_CHANGED","USER",id);
         return me(id);
+    }
+    private UserAccount lockManagementTarget(long actor,long target,String permission) {
+        UserAccount first=mapper.lockUser(Math.min(actor,target));
+        UserAccount second=mapper.lockUser(Math.max(actor,target));
+        UserAccount operator=actor<target?first:second;
+        if(operator==null||!"ACTIVE".equals(operator.status))throw ApiException.unauthorized();
+        if(!mapper.permissions(actor).contains(permission))throw new ApiException(403,"FORBIDDEN","没有执行此操作的权限");
+        UserAccount subject=actor<target?second:first;
+        if(subject==null)throw ApiException.missing();
+        return subject;
     }
 //    角色申请列表
     private ApplicationView applicationView(RoleApplication a) {
@@ -152,10 +171,14 @@ public class IdentityService {
         return new PageResult<>(page,size,mapper.applicationCount(user),mapper.applications(user,size,offset).stream().map(this::applicationView).toList());
     }
     //    申请审核
-    @Transactional public ApplicationView decide(long actor,long id,Decision input) {
+    @Transactional(isolation=Isolation.READ_COMMITTED)
+    public ApplicationView decide(long actor,long id,Decision input) {
         RoleApplication found=mapper.application(id);if(found==null)throw ApiException.missing();
-        mapper.lockUser(found.userId);RoleApplication a=mapper.lockApplication(id);
-        if(actor==a.userId)throw ApiException.conflict("不能审核自己的申请");
+        if(actor==found.userId)throw ApiException.conflict("不能审核自己的申请");
+        lockManagementTarget(actor,found.userId,"system:user:manage");
+        RoleApplication a=mapper.lockApplication(id);
+        if(a==null)throw ApiException.missing();
+        if(!found.userId.equals(a.userId))throw ApiException.conflict("申请归属已变化，请刷新");
         if(!"PENDING".equals(a.status))throw ApiException.conflict("申请已处理，请刷新列表");
         a.status=input.decision();a.reviewerId=actor;a.reviewNote=input.note().trim();mapper.decision(a);
         if("APPROVED".equals(a.status))mapper.grant(a.userId,"CONTRIBUTOR",actor);

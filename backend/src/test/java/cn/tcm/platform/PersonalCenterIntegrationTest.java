@@ -209,26 +209,55 @@ class PersonalCenterIntegrationTest {
         call(as(u,get("/api/v1/me/following?page=-1")),400);
         call(as(u,get("/api/v1/resources/not-a-number")),400);
     }
+    private Map<String,Object> articleLock(JsonNode article) {
+        return Map.of("baseRevisionId", article.path("revisionId").asText(), "lockVersion", article.path("lockVersion").asInt());
+    }
+
+    private MockHttpServletRequestBuilder articleBody(MockHttpServletRequestBuilder request, Object payload) throws Exception {
+        return request.contentType("application/json").content(json.writeValueAsBytes(payload));
+    }
+
+    private MockHttpServletRequestBuilder articleCommand(String path, Object payload) throws Exception {
+        return articleBody(post(path).header("Idempotency-Key", UUID.randomUUID().toString()), payload);
+    }
+
+    private MockHttpServletRequestBuilder deleteDraft(String path, JsonNode article) {
+        return delete(path).param("baseRevisionId", article.path("revisionId").asText())
+                .param("lockVersion", article.path("lockVersion").asText());
+    }
+
+    private Map<String,Object> draftInput(JsonNode article, String title, String body, String section) {
+        var input = new HashMap<String,Object>(articleLock(article));
+        input.put("title", title);
+        input.put("body", body);
+        if (section != null) input.put("sectionId", section);
+        return input;
+    }
+
     @Test void articleDraftsRequirePermissionAndFrozenSubmissionsGetReviewTasks() throws Exception {
         User owner=user(),other=user();
-        String body="{\"title\":\"我的文章\",\"body\":\"真实草稿正文\"}";
-        call(as(owner,post("/api/v1/me/articles").contentType("application/json").content(body)),403);
+        var input=Map.of("title","我的文章","body","真实草稿正文");
+        call(as(owner,articleCommand("/api/v1/me/articles",input)),403);
         db.update("INSERT INTO sys_user_roles(user_id,role_id) SELECT ?,id FROM sys_roles WHERE code='CONTRIBUTOR'",owner.id());
         sqlSession.clearCache(); // Direct fixture mutation bypasses MyBatis inside the test's shared transaction.
-        JsonNode draft=call(as(owner,post("/api/v1/me/articles").contentType("application/json").content(body)),201);
+        JsonNode draft=call(as(owner,articleCommand("/api/v1/me/articles",input)),201);
         String id=draft.path("id").asText();
-        call(as(other,get("/api/v1/me/articles/"+id)),404);
-        call(as(owner,post("/api/v1/me/articles/"+id+"/submit")),200);
+        String path="/api/v1/me/articles/"+id;
+        call(as(other,get(path)),404);
+        call(as(owner,articleCommand(path+"/submit",articleLock(draft))),400);
+        String section=db.queryForObject("SELECT id FROM community_sections WHERE code='study'",String.class);
+        JsonNode classified=call(as(owner,articleBody(patch(path),draftInput(draft,"我的文章","真实草稿正文",section))),200);
+        JsonNode submitted=call(as(owner,articleCommand(path+"/submit",articleLock(classified))),200);
         assertThat(db.queryForObject("SELECT COUNT(*) FROM review_tasks t JOIN content_revisions v ON v.id=t.revision_id WHERE v.resource_id=? AND t.status='PENDING'",Integer.class,id)).isEqualTo(1);
-        call(as(owner,patch("/api/v1/me/articles/"+id).contentType("application/json").content(body)),409);
+        call(as(owner,articleBody(patch(path),draftInput(submitted,"我的文章","真实草稿正文",section))),409);
         call(as(owner,get("/api/v1/resources/"+id)),404);
-        call(as(owner,post("/api/v1/me/articles/"+id+"/withdraw")),200);
+        JsonNode withdrawn=call(as(owner,articleCommand(path+"/withdraw",articleLock(submitted))),200);
         assertThat(db.queryForObject("SELECT status FROM review_tasks t JOIN content_revisions v ON v.id=t.revision_id WHERE v.resource_id=?",String.class,id)).isEqualTo("WITHDRAWN");
-        call(as(owner,patch("/api/v1/me/articles/"+id).contentType("application/json").content(body)),409);
-        JsonNode revised=call(as(owner,post("/api/v1/me/articles/"+id+"/revise")),200);
+        call(as(owner,articleBody(patch(path),draftInput(withdrawn,"我的文章","真实草稿正文",section))),409);
+        JsonNode revised=call(as(owner,articleCommand(path+"/revise",articleLock(withdrawn))),200);
         assertThat(revised.path("revisionState").asText()).isEqualTo("DRAFT");
         assertThat(db.queryForObject("SELECT COUNT(*) FROM content_revisions WHERE resource_id=?",Integer.class,id)).isEqualTo(2);
-        call(as(owner,delete("/api/v1/me/articles/"+id)),200);
+        call(as(owner,deleteDraft(path,revised)),200);
         assertThat(db.queryForObject("SELECT COUNT(*) FROM content_revisions WHERE resource_id=? AND revision_state='WITHDRAWN'",Integer.class,id)).isEqualTo(1);
     }
     @Test void avatarRequiresActualBoundedImageAndServesOnlyVerifiedPng() throws Exception {
@@ -352,13 +381,17 @@ class PersonalCenterIntegrationTest {
     }
     @Test void articleRevisionLifecycleNeverReplacesPublishedVersionBeforeReview() throws Exception {
         User owner=user(),reader=user();long id=resource(owner,true);
-        db.update("INSERT INTO sys_user_roles(user_id,role_id) SELECT ?,id FROM sys_roles WHERE code='CONTRIBUTOR'",owner.id());sqlSession.clearCache();
-        call(as(owner,post("/api/v1/me/articles/"+id+"/revise")),200);
-        JsonNode updated=call(as(owner,patch("/api/v1/me/articles/"+id).contentType("application/json").content("{\"title\":\"未公开的新版\",\"body\":\"私有新版正文\"}")),200);
+        db.update("INSERT INTO community_post_profiles(resource_id,section_id) SELECT ?,id FROM community_sections WHERE code='study'",id);
+        db.update("INSERT INTO sys_user_roles(user_id,role_id) SELECT ?,id FROM sys_roles WHERE code='CONTRIBUTOR'",owner.id());
+        sqlSession.clearCache();
+        String path="/api/v1/me/articles/"+id;
+        JsonNode original=call(as(owner,get(path)),200);
+        JsonNode revised=call(as(owner,articleCommand(path+"/revise",articleLock(original))),200);
+        JsonNode updated=call(as(owner,articleBody(patch(path),draftInput(revised,"未公开的新版","私有新版正文",null))),200);
         assertThat(updated.path("title").asText()).isEqualTo("未公开的新版");
-        call(as(reader,patch("/api/v1/me/articles/"+id).contentType("application/json").content("{\"title\":\"越权\",\"body\":\"越权\"}")),403);
-        call(as(owner,post("/api/v1/me/articles/"+id+"/submit")),200);
-        call(as(owner,delete("/api/v1/me/articles/"+id)),409);
+        call(as(reader,articleBody(patch(path),draftInput(updated,"越权","越权",null))),403);
+        JsonNode submitted=call(as(owner,articleCommand(path+"/submit",articleLock(updated))),200);
+        call(as(owner,deleteDraft(path,submitted)),409);
         assertThat(call(as(reader,get("/api/v1/resources/"+id)),200).path("title").asText()).isEqualTo("公开标题");
         JsonNode own=call(as(owner,get("/api/v1/me/publications")),200);
         assertThat(own.path("total").asInt()).isEqualTo(1);

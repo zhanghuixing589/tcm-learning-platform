@@ -8,11 +8,16 @@ import WorkspaceState from "./WorkspaceState.vue";
 import KnowledgeRead from "./KnowledgeRead.vue";
 import SourceRead from "./SourceRead.vue";
 import VersionCompare from "./VersionCompare.vue";
+import CommunityMarkdown from "../community/CommunityMarkdown.vue";
+import CommunityReferences from "../community/CommunityReferences.vue";
+import { communityApi } from "../community/api";
+import type { TextPolicy } from "../community/types";
 import "./stage.css";
 const route = useRoute(),
   session = useSessionStore(),
   { loading, busy, error, actionError, message, load, act } = useWorkspace();
 const item = ref<ReviewDetail | null>(null),
+  articlePolicy = ref<TextPolicy | null>(null),
   segments = ref<Segment[]>([]),
   note = ref(""),
   decision = ref<"APPROVED" | "REJECTED">("APPROVED");
@@ -29,6 +34,7 @@ function refresh() {
   item.value = null;
   note.value = "";
   segments.value = [];
+  articlePolicy.value = null;
   load(
     async () => {
       const detail = await stageApi.review(String(route.params.id));
@@ -37,11 +43,15 @@ function refresh() {
           ? (await stageApi.segments(detail.document.id, { pageSize: 100 }))
               .items
           : [];
-      return { detail, parts };
+      const policy = detail.article
+        ? await communityApi.textPolicy().catch(() => null)
+        : null;
+      return { detail, parts, policy };
     },
     (value) => {
       item.value = value.detail;
       segments.value = value.parts;
+      articlePolicy.value = value.policy;
     },
   );
 }
@@ -149,7 +159,10 @@ watch(() => route.params.id, refresh, { immediate: true });
         <section v-if="item.article" class="stage-section">
           <h2>待审核文章</h2>
           <h3>{{ item.article.title }}</h3>
-          <p class="stage-prose">{{ item.article.body }}</p>
+          <p v-if="item.article.section" class="muted">投稿分区 {{ item.article.section.name }}</p>
+          <CommunityMarkdown :body="item.article.body" :source-format="item.article.sourceFormat"
+            :references="item.article.references" :policy="articlePolicy" />
+          <CommunityReferences :references="item.article.references || []" :policy="articlePolicy" />
         </section>
         <section class="stage-section">
           <h2>审核处理</h2>

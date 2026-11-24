@@ -1,10 +1,10 @@
 param([string]$Maven = 'D:\develop\apache-maven-3.9.9\bin\mvn.cmd', [string]$JavaHome = 'D:\develop\Java\jdk-17', [string]$TestPattern)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
-if (!(Test-Path -LiteralPath (Join-Path $projectRoot 'runtime\dev-mysql.json'))) {
-    python (Join-Path $PSScriptRoot 'dev_mysql.py') start
-    if ($LASTEXITCODE -ne 0) { throw 'Temporary MySQL failed to start' }
-}
+# A persisted state file may outlive the process after a reboot. The idempotent
+# launcher probes readiness and restarts the recorded data directory if needed.
+python (Join-Path $PSScriptRoot 'dev_mysql.py') start
+if ($LASTEXITCODE -ne 0) { throw 'Temporary MySQL failed to start' }
 $state = Get-Content -LiteralPath (Join-Path $projectRoot 'runtime\dev-mysql.json') -Raw | ConvertFrom-Json
 $env:DB_URL = "jdbc:mysql://127.0.0.1:$($state.port)/tcm_stage_one?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8"
 $env:DB_USERNAME = 'tcm_stage'

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { api, errorMessage } from "../../shared/api/client";
 import type { Envelope } from "../../shared/api/types";
@@ -11,6 +11,8 @@ import {
   type ResourceDetail,
 } from "./personalCenter";
 import AccountIcon from "./AccountIcon.vue";
+import CommunityReader from "../community/CommunityReader.vue";
+import CommunityMarkdown from "../community/CommunityMarkdown.vue";
 import "./account.css";
 const route = useRoute(),
   item = ref<ResourceDetail | null>(null),
@@ -20,6 +22,9 @@ const route = useRoute(),
   pending = ref<string[]>([]);
 const requests = latestRequest();
 const session = useSessionStore();
+const community = computed(() => item.value?.community
+  ? { ...item.value.community, body: item.value.body }
+  : null);
 let viewVersion = 0;
 async function load() {
   viewVersion++;
@@ -77,7 +82,7 @@ onBeforeUnmount(() => {
 });
 </script>
 <template>
-  <div class="account-subpage">
+  <div :class="community ? 'community-page' : 'account-subpage'">
     <RouterLink class="account-back" to="/account"
       ><AccountIcon name="back" :size="18" />返回个人中心</RouterLink
     ><el-skeleton v-if="loading" :rows="8" animated />
@@ -86,6 +91,7 @@ onBeforeUnmount(() => {
       <p>{{ error }}</p>
       <el-button @click="load">重新加载</el-button>
     </div>
+    <CommunityReader v-else-if="community" :post="community" />
     <article v-else-if="item">
       <p v-if="item.resourceType === 'KNOWLEDGE'" class="success-message">
         <RouterLink :to="`/knowledge/${item.id}`"
@@ -103,7 +109,9 @@ onBeforeUnmount(() => {
           }}</time>
         </div>
       </header>
-      <div class="resource-body">{{ item.body }}</div>
+      <CommunityMarkdown v-if="item.resourceType === 'ARTICLE' || item.resourceType === 'POST'"
+        :body="item.body" source-format="PLAIN_TEXT" />
+      <div v-else class="resource-body">{{ item.body }}</div>
       <p v-if="actionError" class="error-message" role="alert">
         {{ actionError }}
       </p>

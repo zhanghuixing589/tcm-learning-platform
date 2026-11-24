@@ -32,7 +32,7 @@ class SessionExpirationTest {
         when(mapper.lockToken(previous.tokenHash)).thenReturn(previous);
         return new IdentityService(mapper,mock(PasswordEncoder.class),tokens,
                 new SecurityProperties("test-signing-secret-at-least-32-bytes",List.of("http://localhost:5173"),false,900,7,30),
-                Clock.fixed(now,ZoneOffset.UTC));
+                Clock.fixed(now,ZoneOffset.UTC),mock(cn.tcm.platform.community.infrastructure.CommunitySectionRepository.class));
     }
     @ParameterizedTest @ValueSource(longs={0,1,86400})
     void atOrAfterAbsoluteDeadlineRejectsEvenAnOtherwiseUnexpiredRefresh(long secondsAfter) {

@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { watch } from "vue";
+import { computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useSessionStore } from "./shared/stores/session";
+import { canEnter } from "./router/access";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 const session = useSessionStore(),
   route = useRoute(),
   router = useRouter();
-watch(
-  () => session.user,
-  (user) => {
-    if (!user && route.meta.requiresAuth)
-      void router.replace({
-        path: "/login",
-        query: { redirect: route.fullPath },
-      });
-  },
-);
+const allowed = computed(() => canEnter(route.meta, session.user));
+watch(allowed, (canView) => {
+  if (canView) return;
+  void router.replace(session.user
+    ? "/forbidden"
+    : { path: "/login", query: { redirect: route.fullPath } });
+}, { immediate: true });
 </script>
 <template>
-  <el-config-provider :locale="zhCn"><RouterView /></el-config-provider>
+  <el-config-provider :locale="zhCn">
+    <RouterView v-if="allowed" :key="session.user?.id ?? 'anonymous'" />
+  </el-config-provider>
 </template>

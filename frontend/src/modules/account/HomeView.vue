@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useSessionStore } from "../../shared/stores/session";
 const session = useSessionStore();
-const modules = ["问答助手", "学习与测验", "个性化推荐", "科普社区"];
+const modules = ["问答助手", "学习与测验", "个性化推荐"];
 </script>
 <template>
   <section class="welcome">
@@ -36,6 +36,10 @@ const modules = ["问答助手", "学习与测验", "个性化推荐", "科普�
       <li>
         <RouterLink to="/formulas/compare">方剂比较</RouterLink
         ><span class="muted">已开放</span>
+      </li>
+      <li>
+        <RouterLink to="/community">科普社区</RouterLink
+        ><span class="muted">分区讨论与科普文章</span>
       </li>
       <li>
         <RouterLink to="/contribute">资料与知识贡献</RouterLink
