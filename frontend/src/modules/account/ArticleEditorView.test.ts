@@ -43,6 +43,7 @@ it("does not overwrite a newly opened article when an earlier save resolves late
     routes: [
       { path: "/account/articles/:articleId", component: ArticleEditorView },
       { path: "/account", component: { render: () => h("div") } },
+      { path: "/contribute", component: { render: () => h("div") } },
     ],
   });
   await router.push("/account/articles/11");
@@ -79,6 +80,7 @@ async function mountArticle(id = "new") {
     routes: [
       { path: "/account/articles/:articleId", component: ArticleEditorView },
       { path: "/account", component: { render: () => h("div") } },
+      { path: "/contribute", component: { render: () => h("div") } },
     ],
   });
   await router.push("/account/articles/" + id);
@@ -304,4 +306,21 @@ it("refreshes quota request capability after a pending request is decided withou
   expect((wrapper.get("#article-body").element as HTMLTextAreaElement).value).toBe(source);
   expect(wrapper.text()).toContain("当前修改尚未保存");
   wrapper.unmount();
+});
+
+it('tracks top server-draft saving, failure, success and later unsaved edits',async()=>{
+ vi.spyOn(api.http,'get').mockImplementation(async url=>({data:{data:url==='/community/text-policy'?testPolicy:[]}}));
+ let rejectSave!: (error: Error)=>void;
+ const post=vi.spyOn(api.http,'post').mockImplementationOnce(()=>new Promise((_resolve,reject)=>{rejectSave=reject;}));
+ const {wrapper}=await mountArticle();
+ expect(wrapper.get('.server-draft-status').text()).toContain('未保存到服务器');
+ await wrapper.get('#article-title').setValue('保存状态');await wrapper.get('#article-body').setValue('真实正文');
+ await wrapper.get('button[aria-label="保存草稿（顶部）"]').trigger('click');
+ expect(wrapper.get('.server-draft-status').text()).toContain('正在保存到服务器');
+ expect(wrapper.get('button[aria-label="保存草稿（顶部）"]').attributes('disabled')).toBeDefined();
+ rejectSave(new Error('offline'));await flushPromises();expect(wrapper.get('.server-draft-status').text()).toContain('保存失败');expect((wrapper.get('#article-body').element as HTMLTextAreaElement).value).toBe('真实正文');
+ post.mockResolvedValue({data:{data:testArticle('33','保存状态','真实正文')}});
+ await wrapper.get('button[aria-label="保存草稿（顶部）"]').trigger('click');await flushPromises();
+ expect(wrapper.get('.server-draft-status').text()).toContain('已保存到服务器');
+ await wrapper.get('#article-body').setValue('之后的修改');expect(wrapper.get('.server-draft-status').text()).toContain('未保存到服务器');wrapper.unmount();
 });

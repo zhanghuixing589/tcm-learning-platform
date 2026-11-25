@@ -79,7 +79,7 @@ class CommunityMigrationTest {
     @Test void emptySchemaCreatesElevenTablesPolicyContractAndOnlyExplicitAdminCapabilities() throws Exception {
         migrate(null);
         assertThat(number("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name<>'flyway_schema_history'")).isEqualTo(84);
-        assertThat(number("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1")).isEqualTo(9);
+        assertThat(number("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1")).isEqualTo(10);
         assertThat(columnExists("community_comments","body")).isFalse();
         JsonNode policy=new ObjectMapper().readTree(string("SELECT config FROM community_text_policies WHERE version_no=1"));
         assertThat(policy.path("maxTitleChars").asInt()).isEqualTo(120);

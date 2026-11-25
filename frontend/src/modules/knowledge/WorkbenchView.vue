@@ -15,6 +15,7 @@ import { useWorkspace } from "./useWorkspace";
 import WorkspaceState from "./WorkspaceState.vue";
 import PaginationBar from "./PaginationBar.vue";
 import "./stage.css";
+import StatusBadge from "../../app/ui/StatusBadge.vue";
 const route = useRoute(),
   router = useRouter(),
   session = useSessionStore();
@@ -77,7 +78,7 @@ function refresh() {
 watch(() => route.fullPath, refresh, { immediate: true });
 </script>
 <template>
-  <section class="stage-page">
+  <section class="stage-page contribution-workspace">
     <header class="stage-heading">
       <div>
         <h1>贡献工作台</h1>
@@ -90,6 +91,7 @@ watch(() => route.fullPath, refresh, { immediate: true });
         ><RouterLink to="/contribute/import">批量导入</RouterLink>
       </div>
     </header>
+    <ol class="contribution-flow" aria-label="知识贡献流程"><li><span>01</span><div><strong>添加来源</strong><small>上传资料，核对书目信息</small></div></li><li><span>02</span><div><strong>整理知识</strong><small>引用原文，完善知识草稿</small></div></li><li><span>03</span><div><strong>提交审核</strong><small>关注状态，查看审核反馈</small></div></li><li><span>04</span><div><strong>形成正式版本</strong><small>审核通过后供学习者阅读</small></div></li></ol>
     <p v-if="!contributor" class="stage-file-note">
       提交来源和知识需要贡献资格。<RouterLink to="/applications"
         >申请贡献资格</RouterLink
@@ -142,8 +144,7 @@ watch(() => route.fullPath, refresh, { immediate: true });
           <div class="stage-meta">
             <span class="stage-tag">{{
               sourceTypeLabels[item.sourceType]
-            }}</span><span>{{ stateLabels[item.reviewState] }}</span
-            ><span v-if="item.parseRun"
+            }}</span><StatusBadge :state="item.reviewState" :label="stateLabels[item.reviewState] || item.reviewState" /><span v-if="item.parseRun"
               >解析：{{
                 stateLabels[item.parseRun.status] || item.parseRun.status
               }}</span
@@ -166,10 +167,7 @@ watch(() => route.fullPath, refresh, { immediate: true });
       <ul v-else-if="tab === 'knowledge' && drafts.length" class="stage-list">
         <li v-for="item in drafts" :key="item.revisionId">
           <div class="stage-meta">
-            <span class="stage-tag">{{ typeLabels[item.type] }}</span><span>{{
-              stateLabels[item.revisionState]
-            }}</span
-            ><span>第 {{ item.versionNo }} 版</span>
+            <span class="stage-tag">{{ typeLabels[item.type] }}</span><StatusBadge :state="item.revisionState" :label="stateLabels[item.revisionState] || item.revisionState" /><span>第 {{ item.versionNo }} 版</span>
           </div>
           <h2>
             <RouterLink :to="`/contribute/knowledge/${item.id}`">{{

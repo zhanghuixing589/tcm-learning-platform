@@ -1,5 +1,7 @@
 # 开发依据与发现
 
+> 历史快照说明（2026-11-24）：下文按早期设计/开发时间追加，其中“无工程”等描述仅对应当时状态，不代表当前仓库。当前已有 backend、frontend、ai-service 工程；当前任务与模块入口以 DEVELOPMENT_STATE.md、MODULE_INDEX.md 为准，历史记录保留用于追溯。
+
 - 仓库当前无 pom.xml / package.json / Python 应用入口，69表、149外键、95项功能均为设计基线。
 - `sys_users` 使用 BCrypt、ACTIVE/DISABLED、credential_version；`auth_refresh_tokens` 保存 token_hash / family_key / expires_at / revoked_at / replaced_by_id。
 - 注册默认 LEARNER。CONTRIBUTOR 可申请，ADMIN 审批；REVIEWER 与 ADMIN 仅显式授权。ADMIN 不自动具备专业审核权限。

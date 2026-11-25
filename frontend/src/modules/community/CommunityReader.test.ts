@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { api } from "../../shared/api/client";
 import ResourceView from "../account/ResourceView.vue";
 import CommunityDetailView from "./CommunityDetailView.vue";
+import CommunityReader from "./CommunityReader.vue";
 import { testPolicy } from "./testFixtures";
 import type { Post } from "./types";
 
@@ -31,6 +32,7 @@ it.each([
     if (url === "/posts/42") return { data: { data: { ...post, body } } };
     if (url === "/posts/42/comments") return { data: { data: { page: 1, pageSize: 20, total: 0, items: [] } } };
     if (url === "/community/text-policy") return { data: { data: testPolicy } };
+    if (url === "/posts") return { data: { data: { page: 1, pageSize: 4, total: 0, items: [] } } };
     throw new Error("Unexpected path " + url);
   });
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: pattern, component }] });
@@ -42,4 +44,28 @@ it.each([
     .toEqual([endpoint]);
   expect(get.mock.calls.filter(([url]) => url === "/posts/42/comments")).toHaveLength(1);
   wrapper.unmount();
+});
+
+it('refreshes the server comment count after a mutation without replacing the displayed source', async () => {
+  vi.spyOn(api.http, 'get').mockImplementation(async url => {
+    if (url === '/community/text-policy') return { data: { data: testPolicy } };
+    if (url === '/posts/42') return { data: { data: { ...post, body: '不应覆盖当前阅读版本', commentCount: 2 } } };
+    throw new Error('Unexpected path');
+  });
+  const wrapper = mount(CommunityReader, { props: { post: { ...post, body: '正在阅读的正文' } }, global: {
+    plugins: [createPinia()], stubs: { RouterLink: true, CommunityRelated: true, CommentThread: { emits: ['changed'], template: '<button @click="$emit(\'changed\')">模拟评论成功</button>' } },
+  } });
+  await flushPromises();
+  await wrapper.findAll('button').find(button => button.text() === '模拟评论成功')!.trigger('click'); await flushPromises();
+  expect(wrapper.get('.reader-comment-jump').text()).toContain('2 条评论');
+  expect(wrapper.get('.community-prose').text()).toBe('正在阅读的正文');
+  wrapper.unmount();
+});
+
+it.each([
+ ['2026-11-20T08:00:00Z',false],['2026-11-20T10:00:00Z',false],['2026-11-21T08:00:00Z',true],
+])('only shows a distinguishable update date %s',async(updated,visible)=>{
+ vi.spyOn(api.http,'get').mockResolvedValue({data:{data:testPolicy}});
+ const wrapper=mount(CommunityReader,{props:{post:{...post,body:'正文',publicEditedAt:updated}},global:{plugins:[createPinia()],stubs:{RouterLink:true,CommunityRelated:true,CommentThread:true}}});
+ await flushPromises();expect(wrapper.get('.reader-author-line').text().includes('更新于')).toBe(visible);wrapper.unmount();
 });

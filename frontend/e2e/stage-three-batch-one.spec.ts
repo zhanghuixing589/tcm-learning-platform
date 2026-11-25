@@ -178,13 +178,12 @@ test("community sections, discussions, threaded comments and personal interactio
   await test.step("reader searches and filters, reads Markdown and records one view", async () => {
     await readerPage.goto("/community");
     await readerPage.getByLabel("搜索社区内容").fill(title);
-    await readerPage.getByLabel("内容类型").selectOption("ARTICLE");
-    await readerPage.getByRole("button", { name: "应用筛选" }).click();
+    await readerPage.getByRole("navigation", { name: "内容发现类型" }).getByRole("button", { name: "科普文章", exact: true }).click();
     await expect(readerPage.getByText("没有符合条件的内容。")).toBeVisible();
-    await readerPage.getByLabel("内容类型").selectOption("POST");
-    await readerPage.getByLabel("排序").selectOption("LATEST_REPLY");
+    await readerPage.getByRole("navigation", { name: "内容发现类型" }).getByRole("button", { name: "学习讨论", exact: true }).click();
+    await expect(readerPage.getByRole("link", { name: title, exact: true })).toBeVisible();
     const filtered = responseFor(readerPage, "GET", "/api/v1/posts");
-    await readerPage.getByRole("button", { name: "应用筛选" }).click();
+    await readerPage.getByLabel("排序").selectOption("LATEST_REPLY");
     const filteredUrl = new URL((await filtered).url());
     expect(filteredUrl.searchParams.get("sort")).toBe("LATEST_REPLY");
     expect(filteredUrl.searchParams.get("type")).toBe("POST");

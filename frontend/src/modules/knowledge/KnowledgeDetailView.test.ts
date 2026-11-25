@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from "vue-router";
 import { api } from "../../shared/api/client";
 import { stageApi, type KnowledgeDetail } from "./api";
 import KnowledgeDetailView from "./KnowledgeDetailView.vue";
+import {libraryItem} from './libraryTestFixtures';
 
 afterEach(() => vi.restoreAllMocks());
 it("reads relations and bookmark state from one knowledge detail request", async () => {
@@ -55,4 +56,22 @@ it("reads relations and bookmark state from one knowledge detail request", async
   const button = wrapper.findAll("button").find((x) => x.text() === "已收藏");
   expect(button?.attributes("aria-pressed")).toBe("true");
   wrapper.unmount();
+});
+
+it('does not disclose an unavailable revision or expose reviewer controls to readers',async()=>{
+ const item=libraryItem('11');
+ item.reviewNote='内部审核记录';
+ vi.spyOn(stageApi,'detail').mockResolvedValueOnce(item).mockRejectedValueOnce({isAxiosError:true,response:{status:404}});
+ const router=createRouter({history:createMemoryHistory(),routes:[{path:'/knowledge/:id',component:KnowledgeDetailView},{path:'/knowledge',component:{template:'<div />'}}]});
+ await router.push('/knowledge/11');
+ const wrapper=mount(KnowledgeDetailView,{global:{plugins:[createPinia(),router]}});
+ await flushPromises();
+ expect(wrapper.text()).toContain(item.canonicalName);
+ expect(wrapper.text()).not.toContain('内部审核记录');
+ expect(wrapper.text()).not.toContain('停用知识');
+ await router.push('/knowledge/hidden');await flushPromises();
+ expect(wrapper.text()).toContain('知识暂不可访问');
+ expect(wrapper.text()).not.toContain(item.canonicalName);
+ expect(wrapper.find('.knowledge-paper').exists()).toBe(false);
+ wrapper.unmount();
 });

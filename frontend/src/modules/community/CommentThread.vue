@@ -9,6 +9,7 @@ import CommentItem from "./CommentItem.vue";
 import CommunityPageBar from "./CommunityPageBar.vue";
 
 const props = defineProps<{ resourceId: string; canComment: boolean; policy: TextPolicy | null; commentsEnabled?: boolean }>();
+const emit = defineEmits<{ changed: [] }>();
 type CommentPage = { data: Page<Comment> | null; loading: boolean; error: string; requestedPage: number; ticket: number; open: boolean };
 type Conflict = { state: "refresh" | "unavailable" } | { state: "review"; latest: Comment };
 const empty = (): CommentPage => ({ data: null, loading: false, error: "", requestedPage: 1, ticket: 0, open: false });
@@ -194,6 +195,7 @@ async function save() {
     keys.forget(operation);
     resetComposer();
     notice.value = editing ? "评论已更新。" : "评论已发布。";
+    emit('changed');
   } catch (cause) {
     if (current === epoch && selected === target.value) {
       error.value = communityError(cause);
@@ -220,6 +222,7 @@ async function remove(item: Comment) {
     if (page?.loading) void load(page, page.requestedPage, value.rootCommentId || undefined);
     if (editingThis) resetComposer();
     notice.value = "评论已删除，已有回复仍可查看。";
+    emit('changed');
   } catch (cause) {
     if (current === epoch) error.value = communityError(cause);
   } finally {
@@ -248,15 +251,15 @@ onBeforeUnmount(() => { epoch++; });
       <button type="button" @click="load(roots, roots.requestedPage)">重新加载评论</button>
     </div>
     <template v-if="roots.data">
-      <p v-if="!roots.data.items.length" class="community-empty">{{ roots.data.total ? "本页没有评论。" : "还没有评论。" }}</p>
+      <p v-if="!roots.data.items.length" class="community-empty">{{ roots.data.total ? "本页没有评论。" : canComment ? "还没有评论，写下你的想法，开启交流。" : "还没有评论。" }}</p>
       <ul class="community-rows">
         <li v-for="item in roots.data.items" :key="item.id" class="community-row">
           <CommentItem :item="item" :busy="busy" :writable="canComment" @reply="select($event, 'reply')" @edit="select($event, 'edit')" @remove="remove" />
           <button v-if="item.replyCount || replies[item.id]?.open" type="button" :data-replies="item.id"
-            :aria-expanded="!!replies[item.id]?.open" @click="toggleReplies(item.id)">
+            :aria-expanded="!!replies[item.id]?.open" :aria-controls="'comment-replies-' + item.id" @click="toggleReplies(item.id)">
             {{ replies[item.id]?.open ? '收起回复' : '查看回复' }}（{{ item.replyCount }}）
           </button>
-          <section v-if="replies[item.id]?.open" class="community-replies" aria-label="评论回复">
+          <section v-if="replies[item.id]?.open" :id="'comment-replies-' + item.id" class="community-replies" aria-label="评论回复">
             <p v-if="replies[item.id].loading" role="status">正在读取回复…</p>
             <div v-if="replies[item.id].error">
               <p role="alert" class="error-message">{{ replies[item.id].error }}</p>
@@ -291,6 +294,7 @@ onBeforeUnmount(() => { epoch++; });
       <label class="community-field">
         {{ conflict?.state === 'unavailable' ? '未发送草稿' : mode === 'edit' ? '编辑评论' : mode === 'reply' ? '回复 ' + (target?.author?.nickname || '评论') : '写评论' }}
         <textarea ref="composer" v-model="body" rows="3" required :readonly="busy || !canComment || conflict?.state === 'unavailable'"
+          :placeholder="mode === 'reply' ? '回应这条评论，让交流更具体…' : mode === 'edit' ? '修改你的评论内容…' : '分享你的看法，也可以补充可核对的出处…'"
           aria-describedby="comment-count" :aria-invalid="overLimit"></textarea>
       </label>
       <p id="comment-count" :class="overLimit ? 'community-over-limit' : 'muted'">

@@ -11,6 +11,7 @@ import static cn.tcm.platform.content.ContentSupport.*;
 @Service
 public class KnowledgeService {
     private final ContentSupport c;
+    private final KnowledgeTaxonomy taxonomy;
 //    基础常量
 //    知识类型：概念、药材、方剂、功效、症状、经络
     private static final Set<String> TYPES=Set.of("CONCEPT","HERB","FORMULA","EFFECT","SYMPTOM","MERIDIAN");
@@ -23,9 +24,9 @@ public class KnowledgeService {
      *
      * @param c 内容支撑组件
      */
-    public KnowledgeService(ContentSupport c){this.c=c;}
+    public KnowledgeService(ContentSupport c,KnowledgeTaxonomy taxonomy){this.c=c;this.taxonomy=taxonomy;}
     /** 查询知识分类目录。 */
-    public List<Map<String,Object>> categories(){return c.db.query("SELECT id,name,code FROM content_categories WHERE scope='KNOWLEDGE' AND active=1 ORDER BY sort_order,id",(r,n)->map("id",r.getString(1),"name",r.getString(2),"code",r.getString(3)));}
+    public List<Map<String,Object>> categories(String type){return taxonomy.directories(type);}
     /** 按资源编号查询知识资源，并根据需要申请数据库行锁。 */
     private Map<String,Object> resource(long resource,boolean lock){return c.row("SELECT * FROM content_resources WHERE id=? AND resource_type='KNOWLEDGE'"+(lock?" FOR UPDATE":""),resource);}
     /** 查询指定知识资源的最新版本。 */
@@ -45,7 +46,8 @@ public class KnowledgeService {
         text(in.title(),255,true);//标题必填≤255
         text(in.body(),100000,true);//内容必填≤100000
         text(in.changeNote(),1000,false);//修改说明可填≤1000
-        if(in.categoryId()!=null&&!in.categoryId().isBlank()&&c.count("SELECT COUNT(*) FROM content_categories WHERE id=? AND scope='KNOWLEDGE' AND active=1",id(in.categoryId()))==0)throw ApiException.invalid("分类不可用");
+        taxonomy.requireDirectory(in.categoryId(),in.type(),true);
+        taxonomy.requireTags(in.tagIds(),true);
         if(list(in.aliases()).size()>50||list(in.evidence()).size()>100||list(in.ingredients()).size()>100||list(in.relations()).size()>100)throw ApiException.invalid("结构化条目过多");
         var aliases=new HashSet<String>();for(String a:list(in.aliases()))if(!aliases.add(text(a,160,true).toLowerCase(Locale.ROOT)))throw ApiException.invalid("别名不能重复");
 //       别名大小写归一化去重
@@ -94,6 +96,7 @@ public class KnowledgeService {
     /** 保存知识版本的规范名、别名、药材或方剂属性、来源依据及结构化关系。 */
     private void saveChildren(long resource,long revision,KnowledgeInput in){
         c.db.update("INSERT INTO knowledge_revision_names(revision_id,knowledge_type,canonical_name) VALUES(?,?,?)",revision,in.type(),in.canonicalName().trim());
+        for(String tag:list(in.tagIds()))c.db.update("INSERT INTO revision_tags(revision_id,tag_id) VALUES(?,?)",revision,id(tag));
         for(String alias:list(in.aliases()))c.db.update("INSERT INTO knowledge_revision_aliases(revision_id,alias) VALUES(?,?)",revision,alias.trim());
         if(in.herb()!=null){
             var h=in.herb();
@@ -114,7 +117,7 @@ public class KnowledgeService {
     /** 清除指定修订版本下的别名、来源依据、组成、关系和类型属性子记录。 */
     private void clear(long revision){for(String table:List.of("formula_ingredients","knowledge_relations","herb_profiles","formula_profiles","knowledge_revision_aliases","knowledge_revision_names","revision_evidence")){String col=switch(table){case "formula_ingredients"->"formula_revision_id";case "knowledge_relations"->"source_revision_id";default->"revision_id";};c.db.update("DELETE FROM "+table+" WHERE "+col+"=?",revision);}}
     /** 修改本人已有草稿，并固定知识身份类型且更新资源锁版本。 */
-    @Transactional public Map<String,Object> update(long actor,long resource,KnowledgeInput in){c.require(actor,"contribution:submit");var r=resource(resource,true);owner(actor,r);var v=latest(resource);if(!"DRAFT".equals(v.get("revision_state")))throw ApiException.conflict("仅本人草稿可以修改");String established=c.db.queryForObject("SELECT knowledge_type FROM knowledge_entries WHERE resource_id=?",String.class,resource);if(!Objects.equals(established,in.type()))throw ApiException.invalid("知识身份类型不可变，请新建相应类型的知识");validate(actor,in,resource);long revision=number(v.get("id"));clear(revision);c.db.update("UPDATE content_revisions SET title=?,body=?,category_id=?,change_note=? WHERE id=?",in.title().trim(),in.body(),nullableId(in.categoryId()),in.changeNote(),revision);saveChildren(resource,revision,in);c.db.update("UPDATE content_resources SET lock_version=lock_version+1 WHERE id=?",resource);return detail(revision,false);}
+    @Transactional public Map<String,Object> update(long actor,long resource,KnowledgeInput in){c.require(actor,"contribution:submit");var r=resource(resource,true);owner(actor,r);var v=latest(resource);if(!"DRAFT".equals(v.get("revision_state")))throw ApiException.conflict("仅本人草稿可以修改");String established=c.db.queryForObject("SELECT knowledge_type FROM knowledge_entries WHERE resource_id=?",String.class,resource);if(!Objects.equals(established,in.type()))throw ApiException.invalid("知识身份类型不可变，请新建相应类型的知识");validate(actor,in,resource);long revision=number(v.get("id"));if(in.tagIds()!=null)c.db.update("DELETE FROM revision_tags WHERE revision_id=?",revision);clear(revision);c.db.update("UPDATE content_revisions SET title=?,body=?,category_id=?,change_note=? WHERE id=?",in.title().trim(),in.body(),nullableId(in.categoryId()),in.changeNote(),revision);saveChildren(resource,revision,in);c.db.update("UPDATE content_resources SET lock_version=lock_version+1 WHERE id=?",resource);return detail(revision,false);}
     /** 查询本人或审核人员可查看的知识草稿版本详情。 */
     public Map<String,Object> draft(long actor,long resource){var r=resource(resource,false);readable(actor,r);return detail(number(latest(resource).get("id")),false);}
 //    修订方法--版本分支复制
@@ -126,9 +129,10 @@ public class KnowledgeService {
         var old=latest(resource);
         if(Set.of("DRAFT","IN_REVIEW").contains(old.get("revision_state")))throw ApiException.conflict("当前已有草稿或待审版本");
         long from=number(old.get("id"));
-        long to=c.insert("INSERT INTO content_revisions(resource_id,version_no,base_revision_id,category_id,title,body,change_note,created_by) SELECT resource_id,version_no+1,id,category_id,title,body,change_note,? FROM content_revisions WHERE id=?",actor,from);
+        long to=c.insert("INSERT INTO content_revisions(resource_id,version_no,base_revision_id,category_id,title,body,change_note,created_by) SELECT v.resource_id,v.version_no+1,v.id,CASE WHEN cat.active=1 AND cat.legacy_archive=0 THEN v.category_id ELSE NULL END,v.title,v.body,v.change_note,? FROM content_revisions v LEFT JOIN content_categories cat ON cat.id=v.category_id WHERE v.id=?",actor,from);
         c.db.update("INSERT INTO knowledge_revision_names SELECT ?,knowledge_type,canonical_name FROM knowledge_revision_names WHERE revision_id=?",to,from);
         c.db.update("INSERT INTO knowledge_revision_aliases SELECT ?,alias FROM knowledge_revision_aliases WHERE revision_id=?",to,from);
+        c.db.update("INSERT INTO revision_tags(revision_id,tag_id) SELECT ?,tag_id FROM revision_tags WHERE revision_id=?",to,from);
         c.db.update("INSERT INTO herb_profiles(revision_id,nature,flavor,origin_note,precautions) SELECT ?,nature,flavor,origin_note,precautions FROM herb_profiles WHERE revision_id=?",to,from);
         c.db.update("INSERT INTO formula_profiles(revision_id,origin_text,function_summary,indication_summary,precautions) SELECT ?,origin_text,function_summary,indication_summary,precautions FROM formula_profiles WHERE revision_id=?",to,from);
         var evidence=new HashMap<Long,Long>();
@@ -155,6 +159,10 @@ public class KnowledgeService {
     }
     /** 校验提交发布所需的来源依据、目标药材和关联目标是否仍有效。 */
     public void publicationReady(long revision){
+        var classification=c.row("SELECT v.category_id,n.knowledge_type FROM content_revisions v JOIN knowledge_revision_names n ON n.revision_id=v.id WHERE v.id=?",revision);
+        try { taxonomy.requireDirectory(sid(classification.get("category_id")),sid(classification.get("knowledge_type")),true);
+            taxonomy.requireTags(c.db.queryForList("SELECT tag_id FROM revision_tags WHERE revision_id=? ORDER BY tag_id",String.class,revision),true);
+        } catch(ApiException e) { throw ApiException.conflict("目录或标签已失效，请退回修订后重新选择"); }
         if(c.count("SELECT COUNT(*) FROM revision_evidence WHERE revision_id=?",revision)==0)throw ApiException.conflict("提交需要至少一条来源依据");
         for(var d:c.db.queryForList("SELECT d.id,d.review_state,d.availability FROM source_documents d JOIN revision_evidence e ON e.document_id=d.id WHERE e.revision_id=? ORDER BY d.id FOR UPDATE",revision))if(!"APPROVED".equals(d.get("review_state"))||!"ACTIVE".equals(d.get("availability")))throw ApiException.conflict("来源必须审核通过且有效");
         for(var i:c.db.queryForList("SELECT herb_resource_id,herb_revision_id FROM formula_ingredients WHERE formula_revision_id=? FOR UPDATE",revision))readyTarget(number(i.get("herb_resource_id")),number(i.get("herb_revision_id")),"HERB");
@@ -183,18 +191,25 @@ public class KnowledgeService {
     /** 查询指定资源的某个修订版本，并校验资源归属或公开可见权限。 */
     public Map<String,Object> version(long actor,long resource,long revision){var r=resource(resource,false);if(c.count("SELECT COUNT(*) FROM content_revisions WHERE id=? AND resource_id=?",revision,resource)==0)throw ApiException.missing();boolean own=number(r.get("owner_id"))==actor||c.has(actor,"knowledge:review");if(!own&&!isVisible(resource,revision))throw ApiException.missing();return detail(revision,!own);}
     /** 分页搜索公开知识或当前用户的贡献稿件，支持关键词、类型、分类和状态筛选。 */
-    public PageResult<Map<String,Object>> search(long actor,boolean own,int page,int size,String q,String type,String category,String state){
+    public PageResult<Map<String,Object>> search(long actor,boolean own,int page,int size,String q,String type,String category,String state){return search(actor,own,page,size,q,type,category,state,null);}
+    public PageResult<Map<String,Object>> search(long actor,boolean own,int page,int size,String q,String type,String category,String state,String tagId){
+        if(category!=null&&!category.isBlank()){if(type==null||type.isBlank())throw ApiException.invalid("筛选目录前请先选择知识类型");taxonomy.requireDirectory(category,type,false);}
+        if(tagId!=null&&!tagId.isBlank())taxonomy.requireTags(List.of(tagId),false);
         int offset=PageResult.offset(page,size);var args=new ArrayList<Object>();String from=" FROM content_resources r JOIN content_revisions v ON v.resource_id=r.id AND "+(own?"v.version_no=(SELECT MAX(x.version_no) FROM content_revisions x WHERE x.resource_id=r.id)":"v.id=r.published_revision_id")+" JOIN knowledge_revision_names n ON n.revision_id=v.id WHERE r.resource_type='KNOWLEDGE'";
         if(own){from+=" AND r.owner_id=?";args.add(actor);}else from+=" AND "+visible("r","v");
-        if(q!=null&&!q.isBlank()){text(q,100,false);from+=" AND (v.title LIKE ? ESCAPE '!' OR n.canonical_name LIKE ? ESCAPE '!' OR EXISTS(SELECT 1 FROM knowledge_revision_aliases a WHERE a.revision_id=v.id AND a.alias LIKE ? ESCAPE '!'))";String like="%"+q.trim().replace("!","!!").replace("%","!%").replace("_","!_")+"%";args.add(like);args.add(like);args.add(like);}
+        if(q!=null&&!q.isBlank()){text(q,100,false);from+=" AND (v.title LIKE ? ESCAPE '!' OR n.canonical_name LIKE ? ESCAPE '!' OR EXISTS(SELECT 1 FROM knowledge_revision_aliases a WHERE a.revision_id=v.id AND a.alias LIKE ? ESCAPE '!') OR EXISTS(SELECT 1 FROM revision_tags rt JOIN content_tags t ON t.id=rt.tag_id WHERE rt.revision_id=v.id AND t.active=1 AND t.name LIKE ? ESCAPE '!'))";String like="%"+q.trim().replace("!","!!").replace("%","!%").replace("_","!_")+"%";args.add(like);args.add(like);args.add(like);args.add(like);}
         if(type!=null&&!type.isBlank()){type(type);from+=" AND n.knowledge_type=?";args.add(type);}if(category!=null&&!category.isBlank()){from+=" AND v.category_id=?";args.add(id(category));}
+        if(tagId!=null&&!tagId.isBlank()){from+=" AND EXISTS(SELECT 1 FROM revision_tags rt WHERE rt.revision_id=v.id AND rt.tag_id=?)";args.add(id(tagId));}
         if(own&&state!=null&&!state.isBlank()){if(!Set.of("DRAFT","IN_REVIEW","APPROVED","REJECTED","WITHDRAWN").contains(state))throw ApiException.invalid("状态不正确");from+=" AND v.revision_state=?";args.add(state);}
         long total=c.count("SELECT COUNT(*)"+from,args.toArray());args.add(size);args.add(offset);var ids=c.db.queryForList("SELECT v.id"+from+" ORDER BY v.updated_at DESC,v.id DESC LIMIT ? OFFSET ?",args.toArray());var items=ids.stream().map(v->detail(number(v.get("id")),!own)).toList();return new PageResult<>(page,size,total,items);
     }
     /** 组装知识修订的完整详情，包括基础内容、别名、类型属性、来源、组成和关系。 */
     public Map<String,Object> detail(long revision,boolean publicView){
-        var v=c.row("SELECT v.*,r.owner_id,r.visibility_status,r.lock_version,n.knowledge_type,n.canonical_name,cat.name AS category_name FROM content_revisions v JOIN content_resources r ON r.id=v.resource_id JOIN knowledge_revision_names n ON n.revision_id=v.id LEFT JOIN content_categories cat ON cat.id=v.category_id WHERE v.id=?",revision);
+        var v=c.row("SELECT v.*,r.owner_id,r.visibility_status,r.lock_version,n.knowledge_type,n.canonical_name,cat.name AS category_name,cat.legacy_archive AS category_legacy,cat.active AS category_active FROM content_revisions v JOIN content_resources r ON r.id=v.resource_id JOIN knowledge_revision_names n ON n.revision_id=v.id LEFT JOIN content_categories cat ON cat.id=v.category_id WHERE v.id=?",revision);
         long resource=number(v.get("resource_id"));String body=sid(v.get("body"));var out=map("id",""+resource,"revisionId",""+revision,"type",v.get("knowledge_type"),"canonicalName",v.get("canonical_name"),"title",v.get("title"),"summary",body.substring(0,Math.min(180,body.length())),"body",body,"categoryId",sid(v.get("category_id")),"categoryName",v.get("category_name"),"visibilityStatus",v.get("visibility_status"),"revisionState",v.get("revision_state"),"versionNo",v.get("version_no"),"ownerId",sid(v.get("owner_id")),"lockVersion",v.get("lock_version"),"createdAt",utc(v.get("created_at")),"updatedAt",utc(v.get("updated_at")),"changeNote",v.get("change_note"));
+        out.put("categoryLegacy",v.get("category_legacy")!=null&&number(v.get("category_legacy"))==1);
+        out.put("categoryActive",v.get("category_active")!=null&&number(v.get("category_active"))==1);
+        out.put("tags",c.db.queryForList("SELECT t.id,t.name,t.active FROM revision_tags rt JOIN content_tags t ON t.id=rt.tag_id WHERE rt.revision_id=? ORDER BY t.name,t.id",revision).stream().map(t->map("id",sid(t.get("id")),"name",t.get("name"),"active",number(t.get("active"))==1)).toList());
         out.put("aliases",c.db.query("SELECT alias FROM knowledge_revision_aliases WHERE revision_id=? ORDER BY alias",(r,n)->r.getString(1),revision));
         out.put("herb",profile("herb_profiles",revision));out.put("formula",profile("formula_profiles",revision));
         var evidence=new ArrayList<Map<String,Object>>();var indices=new HashMap<Long,Integer>();for(var e:c.db.queryForList("SELECT e.*,d.title AS document_title FROM revision_evidence e JOIN source_documents d ON d.id=e.document_id WHERE e.revision_id=?"+(publicView?" AND d.review_state='APPROVED' AND d.availability='ACTIVE'":"")+" ORDER BY e.id",revision)){indices.put(number(e.get("id")),evidence.size());evidence.add(map("id",sid(e.get("id")),"documentId",sid(e.get("document_id")),"segmentId",sid(e.get("segment_id")),"locationLabel",e.get("location_label"),"quoteText",e.get("quote_text"),"documentTitle",e.get("document_title")));}out.put("evidence",evidence);
@@ -210,7 +225,7 @@ public class KnowledgeService {
     @Transactional public Map<String,Object> extract(long actor,ExtractionInput input){
         c.require(actor,"contribution:submit");type(input.type());long document=id(input.documentId());if(c.count("SELECT COUNT(*) FROM source_documents WHERE id=? AND availability='ACTIVE' AND (submitted_by=? OR review_state='APPROVED')",document,actor)==0)throw ApiException.missing();
         if(input.segmentIds()==null||input.segmentIds().isEmpty()||input.segmentIds().size()>50||new HashSet<>(input.segmentIds()).size()!=input.segmentIds().size())throw ApiException.invalid("选择1至50个不同片段");
-        var inputs=new ArrayList<KnowledgeInput>();for(String segment:input.segmentIds()){var s=c.row("SELECT s.* FROM document_segments s JOIN document_parse_runs p ON p.id=s.parse_run_id AND p.status='SUCCEEDED' WHERE s.id=? AND s.document_id=?",id(segment),document);String body=text(sid(s.get("body")),20000,true);String title="待校正："+body.substring(0,Math.min(60,body.length()));inputs.add(new KnowledgeInput(input.type(),title,title,body,null,"从来源片段整理，待人工校正",List.of(),null,null,List.of(new Evidence(""+document,segment,sid(s.get("page_label")),body)),List.of(),List.of()));}
+        var inputs=new ArrayList<KnowledgeInput>();for(String segment:input.segmentIds()){var s=c.row("SELECT s.* FROM document_segments s JOIN document_parse_runs p ON p.id=s.parse_run_id AND p.status='SUCCEEDED' WHERE s.id=? AND s.document_id=?",id(segment),document);String body=text(sid(s.get("body")),20000,true);String title="待校正："+body.substring(0,Math.min(60,body.length()));inputs.add(new KnowledgeInput(input.type(),title,title,body,null,"从来源片段整理，待人工校正",List.of(),null,null,List.of(new Evidence(""+document,segment,sid(s.get("page_label")),body)),List.of(),List.of(),List.of()));}
         for(var in:inputs)validate(actor,in,0);return map("items",inputs.stream().map(in->createValidated(actor,in)).toList());
     }
     /** 暂停已发布知识的公开可见性，并记录原因和移除索引任务。 */

@@ -6,6 +6,7 @@ import {
   typeLabels,
   stateLabels,
   type Category,
+  type KnowledgeTag,
   type KnowledgeDetail,
   type KnowledgeInput,
 } from "./api";
@@ -27,9 +28,11 @@ const route = useRoute(),
 const item = ref<KnowledgeDetail | null>(null),
   form = ref<KnowledgeInput>(blankKnowledge()),
   categories = ref<Category[]>([]),
+  tags = ref<KnowledgeTag[]>([]),
   aliases = ref(""),
   snapshot = ref(""),
   validation = ref<string[]>([]);
+const allowedCategories = computed(()=>categories.value.filter(category=>category.type===form.value.type));
 const isNew = computed(() => route.params.id === "new");
 const editable = computed(
   () => isNew.value || item.value?.revisionState === "DRAFT",
@@ -47,6 +50,7 @@ function apply(value: KnowledgeDetail) {
     herb: value.herb || blankKnowledge(value.type).herb,
     formula: value.formula || blankKnowledge(value.type).formula,
     categoryId: value.categoryId || undefined,
+    tagIds: value.tags?.map(tag=>tag.id) || [],
     aliases: [...value.aliases],
     evidence: value.evidence.map((x) => ({ ...x })),
     ingredients: value.ingredients.map((x) => ({ ...x })),
@@ -63,10 +67,12 @@ function refresh() {
   load(
     async () => ({
       categories: await stageApi.categories(),
+      tags: await stageApi.tags(),
       draft: isNew.value ? null : await stageApi.draft(String(route.params.id)),
     }),
     (value) => {
       categories.value = value.categories;
+      tags.value = value.tags;
       if (value.draft) apply(value.draft);
       else {
         form.value = blankKnowledge();
@@ -166,11 +172,14 @@ onBeforeRouteLeave(
           <li v-for="text in validation" :key="text">{{ text }}</li>
         </ul>
       </div>
+      <p v-if="item?.categoryLegacy" class="stage-file-note">原目录为历史归档目录。原正式版本保持不变，本次保存前请选择所属类型的新目录或未分类。</p>
       <form @submit.prevent="save">
+        <fieldset class="taxonomy-tags" :disabled="!editable"><legend>通用标签（可跨知识类型，最多20项）</legend><p v-if="!tags.length" class="stage-hint">暂无可选标签，由管理员维护。</p><label v-for="tag in tags" :key="tag.id"><input v-model="form.tagIds" type="checkbox" :value="tag.id"/>{{tag.name}}</label><label v-for="tag in item?.tags?.filter(tag=>!tags.some(active=>active.id===tag.id)) || []" :key="tag.id"><input v-model="form.tagIds" type="checkbox" :value="tag.id"/>{{tag.name}}（已停用，保存前取消）</label></fieldset>
         <div class="stage-grid">
           <label class="stage-field"
             >知识类型<select
               v-model="form.type"
+              @change="form.categoryId=undefined"
               aria-label="知识类型"
               :disabled="!isNew || !editable"
             >
@@ -183,10 +192,11 @@ onBeforeRouteLeave(
               </option></select
             ><small>创建后知识类型固定，新版本沿用同一类型。</small></label
           ><label class="stage-field"
-            >知识分类<select v-model="form.categoryId" :disabled="!editable">
+            >类型专属目录<select v-model="form.categoryId" :disabled="!editable">
               <option :value="undefined">未分类</option>
+              <option v-if="form.categoryId && !allowedCategories.some(category=>category.id===form.categoryId)" :value="form.categoryId" disabled>原目录已归档或停用，请重新选择</option>
               <option
-                v-for="category in categories"
+                v-for="category in allowedCategories"
                 :key="category.id"
                 :value="category.id"
               >

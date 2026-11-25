@@ -113,6 +113,12 @@ onBeforeUnmount(() => summaryRequests.invalidate());
       <AccountContent :can-publish="canPublish" @changed="loadSummary" />
       <aside class="profile-rail" aria-label="学习与账户入口">
         <section class="rail-section">
+          <div class="rail-heading"><AccountIcon name="book" :size="19" /><h2>我的知识空间</h2></div>
+          <p>收藏值得回看的知识，在浏览历史中找回阅读线索。</p>
+          <RouterLink class="rail-link" to="/account?section=bookmarks">整理我的收藏 <AccountIcon name="arrow" :size="16" /></RouterLink>
+          <p class="rail-footnote knowledge-library-note">个人文档知识库尚未开放。</p>
+        </section>
+        <section class="rail-section">
           <div class="rail-heading">
             <AccountIcon name="book" :size="19" />
             <h2>学习，慢慢积累</h2>

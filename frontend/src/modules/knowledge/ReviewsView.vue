@@ -8,6 +8,7 @@ import WorkspaceState from "./WorkspaceState.vue";
 import PaginationBar from "./PaginationBar.vue";
 import FeedbackQueue from "./FeedbackQueue.vue";
 import "./stage.css";
+import StatusBadge from "../../app/ui/StatusBadge.vue";
 const session = useSessionStore();
 const professional = computed(
   () => !!session.user?.permissions.includes("knowledge:review"),
@@ -73,8 +74,8 @@ watch(() => route.fullPath, refresh, { immediate: true });
                 : item.kind === "ARTICLE"
                   ? "文章"
                   : "知识"
-            }}</span><span>{{ stateLabels[item.status] || item.status }}</span
-            ><span>{{ item.submitterName }}</span
+            }}</span><StatusBadge :state="item.status" :label="stateLabels[item.status] || item.status" />
+            <span>{{ item.submitterName }}</span
             ><span v-if="item.reviewerId">已领取</span>
           </div>
           <h2>

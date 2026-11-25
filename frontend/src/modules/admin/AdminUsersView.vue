@@ -93,10 +93,12 @@ async function saveRoles() {
     class="data-table"
     ><el-table-column
       prop="username"
+      show-overflow-tooltip
       label="用户名"
       min-width="150"
     /><el-table-column
       prop="nickname"
+      show-overflow-tooltip
       label="昵称"
       min-width="120"
     /><el-table-column label="角色" min-width="230"

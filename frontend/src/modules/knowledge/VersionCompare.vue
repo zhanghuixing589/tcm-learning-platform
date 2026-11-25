@@ -52,6 +52,7 @@ const fields = computed(() => {
       b: b.categoryName || "未分类",
     },
     { label: "别名", a: a.aliases.join("、"), b: b.aliases.join("、") },
+    { label: "通用标签", a: a.tags?.map(tag=>tag.name).join("、") || "无", b: b.tags?.map(tag=>tag.name).join("、") || "无" },
     { label: "正文", a: a.body, b: b.body },
     { label: "属性", a: facts(a), b: facts(b) },
     { label: "组成", a: ingredients(a), b: ingredients(b) },

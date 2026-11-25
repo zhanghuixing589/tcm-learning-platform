@@ -8,9 +8,12 @@ import { bodyCharacterCount, characterCount, communityError, idempotencyKeys, re
 import type { OwnPost, Section, TextPolicy } from "./types";
 import DiscussionHistory from "./DiscussionHistory.vue";
 import SectionSelect from "./SectionSelect.vue";
-import SourcePreview from "./SourcePreview.vue";
+import MarkdownEditor from "./MarkdownEditor.vue";
+import { useDiscussionDraft } from "./useDiscussionDraft";
 import { useUnsavedEditor } from "./useUnsavedEditor";
 import "./community.css";
+import ComposeNavigation from "./ComposeNavigation.vue";
+import ComposeGuide from "./ComposeGuide.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -35,6 +38,8 @@ const canEdit = computed(() => canPost.value && !stale.value && (!id.value || !!
 const dirty = computed(() => form.title !== saved.value.title || form.body !== saved.value.body
   || form.sectionId !== saved.value.sectionId || form.changeNote !== saved.value.changeNote);
 const canLeave = useUnsavedEditor(dirty);
+const draftReady = computed(() => !loading.value && canEdit.value);
+const { recovery, draftError, draftState, restoreDraft, discardDraft, clearDraft } = useDiscussionDraft(id, draftReady, form, dirty);
 const eligible = (section: Section) => section.capabilities.canPost;
 const sectionName = computed(() => item.value?.published?.section.name
   || flattenSections(groups.value).find((entry) => entry.id === form.sectionId)?.name);
@@ -102,6 +107,7 @@ async function save() {
       const created = await communityApi.createPost(input, keys.for("create", input));
       if (current !== context) return;
       keys.forget("create");
+      clearDraft();
       saved.value = { ...form };
       await router.push("/community/posts/" + created.id);
     } else {
@@ -117,6 +123,7 @@ async function save() {
         return;
       }
       assign(latest);
+      clearDraft();
       message.value = "讨论修订已发布。";
     }
   } catch (cause) {
@@ -130,7 +137,7 @@ onBeforeUnmount(() => { context++; requests.invalidate(); });
 </script>
 
 <template>
-  <div class="community-page community-editor">
+  <div class="community-page community-editor community-compose compose-discussion">
     <RouterLink class="community-back" :to="id ? '/account?section=publications' : '/community'">
       {{ id ? '返回我的发表' : '返回科普社区' }}
     </RouterLink>
@@ -142,28 +149,30 @@ onBeforeUnmount(() => { context++; requests.invalidate(); });
       </div>
       <RouterLink v-if="item?.published" :to="'/community/posts/' + item.id" class="community-button">查看公开讨论</RouterLink>
     </header>
+    <ComposeNavigation kind="POST" :editing="!!id" />
+    <div class="compose-layout"><div class="compose-main">
     <p v-if="loading" role="status">正在读取讨论…</p>
     <p v-if="error" role="alert" class="error-message">{{ error }}</p>
     <p v-if="setupError" role="alert" class="error-message">{{ setupError }}</p>
     <p v-if="message" role="status" class="success-message">{{ message }}</p>
     <button v-if="error || setupError" type="button" :disabled="busy || loading" @click="canLeave() && load()">重新载入</button>
     <template v-if="!loading && (!id || item)">
+      <div v-if="recovery" class="community-panel draft-recovery" role="status"><p>发现当前浏览器保存的讨论草稿。恢复后请核对所属分区与最新版本。</p><button type="button" @click="restoreDraft">恢复草稿</button><button type="button" @click="discardDraft">放弃本地草稿</button></div>
+      <p v-if="draftError" role="status" class="error-message">{{ draftError }}</p>
+      <p class="muted local-draft-note" role="status">{{ recovery ? '有本地草稿待恢复' : draftState === 'saved' ? '已保存到当前浏览器' : draftState === 'failed' ? '本地草稿保存不可用' : '当前浏览器尚无草稿' }}<span> · 仅限此账号和浏览器，发布成功后清除</span></p>
       <p v-if="!canEdit" class="muted">当前讨论只读。</p>
-      <form @submit.prevent="save">
+      <form class="community-writing-form" @submit.prevent="save">
         <label v-if="!id" class="community-field">讨论分区
           <SectionSelect v-model="form.sectionId" :groups="groups" :eligible="eligible" :disabled="!canEdit || busy"
             empty-label="选择分区" required />
         </label>
-        <label class="community-field">标题
-          <input v-model="form.title" id="discussion-title" required :readonly="!canEdit || busy" />
+        <label class="community-field compose-title-field">标题（必填）
+          <input v-model="form.title" id="discussion-title" placeholder="用一句话说明你的主题或疑问" required :readonly="!canEdit || busy" />
         </label>
-        <label class="community-field">正文
-          <textarea id="discussion-body" v-model="form.body" rows="14" required
-            :readonly="!canEdit || busy" aria-describedby="discussion-count" :aria-invalid="overLimit"></textarea>
-        </label>
+        <p class="muted">标题 {{ characterCount(form.title) }}<template v-if="policy"> / {{ policy.config.maxTitleChars }}</template> 字符</p>
+        <MarkdownEditor id="discussion-body" v-model="form.body" kind="POST" :source-format="item?.latestRevision.sourceFormat || 'MARKDOWN'" :policy="policy" :context="id" :readonly="!canEdit || busy" describedby="discussion-count" :invalid="overLimit" />
         <p id="discussion-count" :class="overLimit ? 'community-over-limit' : 'muted'">
-          {{ (item?.latestRevision.sourceFormat || 'MARKDOWN') === 'MARKDOWN' ? 'Markdown' : '纯文本' }}
-          · {{ count }}<template v-if="policy"> / {{ policy.config.maxPostChars }}</template> 字符
+          {{ count }}<template v-if="policy"> / {{ policy.config.maxPostChars }}</template> 字符
         </p>
         <label v-if="id && canEdit" class="community-field">修改说明（选填）
           <textarea v-model="form.changeNote" rows="2" :readonly="busy"></textarea>
@@ -172,8 +181,8 @@ onBeforeUnmount(() => { context++; requests.invalidate(); });
           {{ id ? '发布修订' : '发布讨论' }}
         </button>
       </form>
-      <SourcePreview :body="form.body" :source-format="item?.latestRevision.sourceFormat || 'MARKDOWN'" :policy="policy" :context="id" />
       <DiscussionHistory v-if="item" :post-id="item.id" :latest-revision-id="item.latestRevision.revisionId" />
     </template>
+    </div><ComposeGuide kind="POST" /></div>
   </div>
 </template>

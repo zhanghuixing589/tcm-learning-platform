@@ -9,6 +9,7 @@ export function blankKnowledge(
     title: "",
     body: "",
     aliases: [],
+    tagIds: [],
     evidence: [],
     ingredients: [],
     relations: [],
@@ -28,6 +29,7 @@ export function knowledgePayload(value: KnowledgeInput): KnowledgeInput {
     title: value.title.trim(),
     body: value.body.trim(),
     categoryId: value.categoryId || undefined,
+    tagIds: value.tagIds,
     changeNote: value.changeNote,
     aliases: value.aliases
       .map((x) => x.trim())
@@ -91,6 +93,8 @@ export function knowledgePayload(value: KnowledgeInput): KnowledgeInput {
 }
 export function validateKnowledge(value: KnowledgeInput): string[] {
   const errors: string[] = [];
+  if ((value.tagIds?.length || 0) > 20) errors.push("最多选择20个通用标签");
+  if (value.tagIds && new Set(value.tagIds).size !== value.tagIds.length) errors.push("通用标签不能重复");
   if (!value.canonicalName.trim()) errors.push("请填写规范名称");
   if (!value.title.trim()) errors.push("请填写标题");
   if (!value.body.trim()) errors.push("请填写正文");

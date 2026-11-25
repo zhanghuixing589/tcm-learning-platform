@@ -11,10 +11,12 @@ import ReferenceEditor from "../community/ReferenceEditor.vue";
 import ReferenceOrder from "../community/ReferenceOrder.vue";
 import QuotaPanel from "../community/QuotaPanel.vue";
 import SectionSelect from "../community/SectionSelect.vue";
-import SourcePreview from "../community/SourcePreview.vue";
+import MarkdownEditor from "../community/MarkdownEditor.vue";
 import { useUnsavedEditor } from "../community/useUnsavedEditor";
 import "./account.css";
 import "../community/community.css";
+import ComposeNavigation from "../community/ComposeNavigation.vue";
+import ComposeGuide from "../community/ComposeGuide.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -31,6 +33,18 @@ const setupError = ref("");
 const success = ref("");
 const mustRefresh = ref(false);
 const writeConflict = ref(false);
+const draftSaveState = ref<'idle' | 'saving' | 'saved' | 'failed'>('idle');
+const saveBar = ref<HTMLElement>();
+watch(saveBar, (node, _old, onCleanup) => {
+  if (!node) return;
+  const measure = () => node.closest<HTMLElement>('.compose-article')?.style.setProperty('--compose-save-offset', `${node.getBoundingClientRect().height + 8}px`);
+  measure();
+  if (typeof ResizeObserver !== 'undefined') {
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    onCleanup(() => observer.disconnect());
+  }
+}, { flush: 'post' });
 const keys = idempotencyKeys();
 const requests = latestRequest();
 let contextVersion = 0;
@@ -43,6 +57,10 @@ const editable = computed(() => !mustRefresh.value && canWrite.value &&
 const referencesChanged = computed(() => JSON.stringify(form.references) !== JSON.stringify(saved.value.references));
 const dirty = computed(() => form.title !== saved.value.title || form.body !== saved.value.body
   || form.sectionId !== saved.value.sectionId || form.sourceFormat !== saved.value.sourceFormat || referencesChanged.value);
+const draftSaveLabel = computed(() => mustRefresh.value ? '请核对服务器最新稿件'
+  : draftSaveState.value === 'saving' ? '正在保存到服务器…'
+  : draftSaveState.value === 'failed' ? '保存失败，修改仍保留在编辑器中'
+  : dirty.value || !article.value ? '未保存到服务器' : '已保存到服务器');
 const canLeave = useUnsavedEditor(dirty, () => internalRoute);
 const quota = computed<Quota | null>(() => article.value?.quota ?? (policy.value && {
   bodyCharLimit: policy.value.config.maxArticleChars,
@@ -82,6 +100,7 @@ async function load() {
   const id = String(route.params.articleId);
   if (internalRoute === route.path && article.value?.id === id) return;
   contextVersion++;
+  draftSaveState.value = 'idle';
   keys.clear();
   const ticket = requests.begin();
   error.value = "";
@@ -180,6 +199,7 @@ async function save() {
     ...(form.sectionId && canSelectSection.value ? { sectionId: form.sectionId } : {}),
     ...(!current || referencesChanged.value ? { references: form.references } : {}),
   };
+  draftSaveState.value = 'saving';
   await runWrite(async () => {
     const value = current
       ? await communityApi.saveArticle(current.id, { ...input, ...revisionLock(current) })
@@ -193,6 +213,7 @@ async function save() {
     }
     if (context === contextVersion) success.value = "草稿已保存";
   });
+  if (context === contextVersion) draftSaveState.value = error.value || mustRefresh.value ? 'failed' : 'saved';
 }
 
 async function createIdentity() {
@@ -286,7 +307,7 @@ onBeforeUnmount(() => { contextVersion++; requests.invalidate(); });
 </script>
 
 <template>
-  <div class="community-page community-editor">
+  <div class="community-page community-editor community-compose compose-article">
     <RouterLink class="community-back" to="/account?section=publications">返回我的发表</RouterLink>
     <header class="community-heading">
       <div>
@@ -297,6 +318,8 @@ onBeforeUnmount(() => { contextVersion++; requests.invalidate(); });
       </div>
       <RouterLink v-if="article?.published" class="community-button" :to="'/resources/' + article.id">查看公开版本</RouterLink>
     </header>
+    <ComposeNavigation kind="ARTICLE" :editing="!isNew" />
+    <div class="compose-layout"><div class="compose-main">
     <p v-if="loading" role="status">正在读取稿件…</p>
     <p v-if="error" role="alert" class="error-message">{{ error }}</p>
     <p v-if="setupError" role="alert" class="error-message">{{ setupError }}</p>
@@ -304,6 +327,7 @@ onBeforeUnmount(() => { contextVersion++; requests.invalidate(); });
     <button v-if="mustRefresh || writeConflict || setupError || (!loading && !isNew && !article)"
       type="button" :disabled="busy || loading" @click="canLeave() && load()">重新载入稿件</button>
     <template v-if="!loading && (isNew || article)">
+      <div ref="saveBar" class="compose-save-bar"><p class="server-draft-status" role="status">{{ draftSaveLabel }}<small>服务器稿件{{ editable ? ' · 离开前请保存' : ' · 当前只读' }}</small></p><button v-if="editable" type="button" class="community-primary" aria-label="保存草稿（顶部）" :disabled="busy || overLimit" @click="save">{{ draftSaveState === 'saving' ? '保存中…' : '保存草稿' }}</button></div>
       <p v-if="article?.stateReason" class="error-message">{{ article.stateReason }}</p>
       <p v-if="article?.reviewNote" class="success-message">审核意见 {{ article.reviewNote }}</p>
       <p v-if="article?.revisionState === 'IN_REVIEW'" class="muted">审核中的版本已冻结。需要修改时，请先撤回审核。</p>
@@ -311,10 +335,10 @@ onBeforeUnmount(() => { contextVersion++; requests.invalidate(); });
       <p v-if="article?.published && article.publishedRevisionId !== article.latestRevision.revisionId" class="muted">
         审核通过后，修订版会替换当前公开版本。
       </p>
-      <form @submit.prevent="save">
+      <form class="community-writing-form" @submit.prevent="save">
         <div class="community-form-grid">
-          <label class="community-field">标题
-            <input id="article-title" v-model="form.title" required :readonly="!editable || busy" />
+          <label class="community-field compose-title-field">标题（必填）
+            <input id="article-title" v-model="form.title" placeholder="写下文章标题" required :readonly="!editable || busy" />
           </label>
           <label v-if="canSelectSection" class="community-field">投稿分区
             <SectionSelect id="article-section" v-model="form.sectionId" :groups="groups" :eligible="eligible"
@@ -332,10 +356,8 @@ onBeforeUnmount(() => { contextVersion++; requests.invalidate(); });
           </label>
         </div>
         <p v-if="legacy && canSelectSection" class="muted">可为历史文章选择正式分区。候选稿审核通过后，公开文章才会移入该分区。</p>
-        <label class="community-field">正文
-          <textarea id="article-body" v-model="form.body" rows="16" required
-            :readonly="!editable || busy" aria-describedby="article-count" :aria-invalid="overLimit"></textarea>
-        </label>
+        <p class="muted">标题 {{ characterCount(form.title) }}<template v-if="policy"> / {{ policy.config.maxTitleChars }}</template> 字符。文章草稿保存到服务器，离开前请点击“保存草稿”。</p>
+        <MarkdownEditor id="article-body" v-model="form.body" :source-format="form.sourceFormat" :references="form.references" :policy="policy" :context="String(route.params.articleId)" :readonly="!editable || busy" describedby="article-count" :invalid="overLimit" />
         <p id="article-count" :class="overLimit ? 'community-over-limit' : 'muted'">
           {{ count }}<template v-if="quota"> / {{ quota.bodyCharLimit }}</template> 字符
           <span v-if="overLimit">，已超出当前额度。全文仍保留在编辑器中。</span>
@@ -363,10 +385,9 @@ onBeforeUnmount(() => { contextVersion++; requests.invalidate(); });
       </form>
       <ReferenceOrder v-if="article && editable" :references="form.references"
         :disabled="busy || dirty" @reorder="reorder" />
-      <SourcePreview :body="form.body" :source-format="form.sourceFormat"
-        :references="form.references" :policy="policy" :context="String(route.params.articleId)" />
       <QuotaPanel v-if="article && quota" :key="article.id" :article-id="article.id" :quota="quota"
         :can-request="canWrite && article.capabilities.canRequestQuota" :body-count="count" @quota="updateQuota" />
     </template>
+    </div><ComposeGuide kind="ARTICLE" /></div>
   </div>
 </template>

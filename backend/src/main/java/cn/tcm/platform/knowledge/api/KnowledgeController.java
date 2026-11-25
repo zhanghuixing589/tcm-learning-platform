@@ -13,8 +13,8 @@ public class KnowledgeController {
     private final KnowledgeService service;
     public KnowledgeController(KnowledgeService service){this.service=service;}
     private static long actor(Principal p){return Long.parseLong(p.getName());}
-    @GetMapping("/knowledge/categories") public ApiResponse<?> categories(){return ApiResponse.ok(service.categories());}
-    @GetMapping("/knowledge") public ApiResponse<?> search(Principal p,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="20")int pageSize,@RequestParam(required=false)String q,@RequestParam(required=false)String type,@RequestParam(required=false)String categoryId){return ApiResponse.ok(service.search(actor(p),false,page,pageSize,q,type,categoryId,null));}
+    @GetMapping("/knowledge/categories") public ApiResponse<?> categories(@RequestParam(required=false)String type){return ApiResponse.ok(service.categories(type));}
+    @GetMapping("/knowledge") public ApiResponse<?> search(Principal p,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="20")int pageSize,@RequestParam(required=false)String q,@RequestParam(required=false)String type,@RequestParam(required=false)String categoryId,@RequestParam(required=false)String tagId){return ApiResponse.ok(service.search(actor(p),false,page,pageSize,q,type,categoryId,null,tagId));}
     @GetMapping("/contributions/knowledge") public ApiResponse<?> contributions(Principal p,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="20")int pageSize,@RequestParam(required=false)String q,@RequestParam(required=false)String state){return ApiResponse.ok(service.search(actor(p),true,page,pageSize,q,null,null,state));}
     @PostMapping("/knowledge") @ResponseStatus(HttpStatus.CREATED) public ApiResponse<?> create(Principal p,@Valid @RequestBody KnowledgeInput input){return ApiResponse.ok(service.create(actor(p),input));}
     @GetMapping("/knowledge/{id}") public ApiResponse<?> detail(Principal p,@PathVariable long id){return ApiResponse.ok(service.published(actor(p),id));}

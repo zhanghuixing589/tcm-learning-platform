@@ -18,3 +18,7 @@ logs/
 Thumbs.db
 frontend/.vite/
 
+# Duplicate source images; application assets live in frontend/src/assets/herbs/.
+/img/黄芪.png
+/img/陈皮.png
+

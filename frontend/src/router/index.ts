@@ -182,6 +182,7 @@ export const router = createRouter({
       component: AdminLayout,
       meta: { requiresAuth: true },
       children: [
+        {path:"knowledge/categories",component:()=>import("../modules/knowledge/KnowledgeTaxonomyAdminView.vue"),meta:{permission:"knowledge:taxonomy:manage",title:"知识目录与标签"}},
         {
           path: "applications",
           component: () => import("../modules/admin/AdminApplicationsView.vue"),
@@ -228,6 +229,7 @@ router.beforeEach(async (to) => {
     if (permissions.includes("system:user:manage")) return "/admin/applications";
     if (permissions.includes("community:section:manage")) return "/admin/community/sections";
     if (permissions.includes("community:quota:manage")) return "/admin/community/quotas";
+    if (permissions.includes("knowledge:taxonomy:manage")) return "/admin/knowledge/categories";
     if (permissions.includes("system:job:manage")) return "/admin/jobs";
     return "/forbidden";
   }

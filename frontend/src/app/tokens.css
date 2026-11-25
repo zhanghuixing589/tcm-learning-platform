@@ -1,0 +1,70 @@
+:root {
+  --primary: #176b45;
+  --primary-hover: #105335;
+  --primary-soft: #e4f0e8;
+  --background: #f8f7f2;
+  --paper: #fff;
+  --surface: #f0f3ed;
+  --ink: #202820;
+  --muted: #59665c;
+  --line: #dce2d9;
+  --accent: #c49a52;
+  --danger: #9c302a;
+  --warning: #805b21;
+  --font-body: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-reading: "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, serif;
+  --text-small: .875rem;
+  --text-body: 1rem;
+  --text-title: 2rem;
+  --content-width: 1240px;
+  --reading-width: 74ch;
+  --page-gutter: 32px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius: 8px;
+  --radius-panel: 12px;
+  --shadow-float: 0 12px 36px #20282014;
+  --z-sticky: 20;
+  --z-dropdown: 30;
+  --z-modal: 2000;
+  --z-skip: 2100;
+}
+/* Body owns the Element theme so lazily loaded library :root defaults cannot reset it. */
+:root, body {
+  --el-color-primary: var(--primary);
+  --el-color-primary-light-3: #528e6c;
+  --el-color-primary-light-5: #85ad95;
+  --el-color-primary-light-7: #bed4c6;
+  --el-color-primary-light-8: #d4e3d9;
+  --el-color-primary-light-9: var(--primary-soft);
+  --el-color-primary-dark-2: var(--primary-hover);
+  --el-color-success: var(--primary);
+  --el-color-warning: var(--warning);
+  --el-color-danger: var(--danger);
+  --el-text-color-primary: var(--ink);
+  --el-text-color-regular: #354038;
+  --el-text-color-secondary: var(--muted);
+  --el-text-color-placeholder: #647167;
+  --el-border-color: var(--line);
+  --el-border-color-light: #e7ebe4;
+  --el-fill-color-light: var(--surface);
+  --el-border-radius-base: var(--radius);
+  --el-font-size-base: 14px;
+}
+/* Breakpoints: desktop >=1440; laptop 1024–1439; tablet 768–1023; mobile <=767. */
+@media (max-width: 1023px) {
+  :root {
+    --page-gutter: 24px;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    --page-gutter: 20px;
+    --text-title: 1.625rem;
+  }
+}

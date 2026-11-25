@@ -35,6 +35,8 @@ python scripts\dev_mysql.py stop
 
 ## 阅读顺序
 
+日常开发与跨会话恢复先看 [标准开发工作流](docs/workflow/README.md)、[模块索引](MODULE_INDEX.md) 和 [当前开发状态](DEVELOPMENT_STATE.md)。项目规则见 [AGENTS.md](AGENTS.md)，按需 Skill 位于 `.agents/skills/`；下列完整设计文档按任务查阅，不要求每轮顺序通读。
+
 1. [项目架构](docs/01-项目架构设计.md)
 2. [字段字典](docs/02-数据库字段字典.md)
 3. [关系与业务规则](docs/03-数据库关系与业务规则.md)

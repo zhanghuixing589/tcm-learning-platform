@@ -1,7 +1,6 @@
-.personal-center,
-.account-subpage {
-  --account-ink: oklch(0.25 0.015 150);
-  --account-soft: oklch(0.97 0.006 150);
+.personal-center, .account-subpage {
+  --account-ink: var(--ink);
+  --account-soft: #eaf0e5;
   color: var(--account-ink);
 }
 .account-page-heading {
@@ -24,6 +23,8 @@
   background: var(--account-soft);
   border-radius: 12px;
   padding: 32px 36px 24px;
+  border: 1px solid #d6e1d0;
+  border-top: 3px solid var(--primary);
 }
 .profile-identity {
   display: flex;
@@ -70,8 +71,7 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
-.profile-role,
-.contribution-badge {
+.profile-role, .contribution-badge {
   display: inline-flex;
   padding: 2px 9px;
   border-radius: 4px;
@@ -144,8 +144,7 @@ button.profile-stat {
   font-size: 14px;
   color: var(--muted);
 }
-.profile-stat.is-active,
-button.profile-stat:hover {
+.profile-stat.is-active, button.profile-stat:hover {
   color: var(--primary);
 }
 .profile-stat:disabled {
@@ -162,8 +161,8 @@ button.profile-stat:hover {
 }
 .personal-center-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 256px;
-  gap: 48px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 32px;
   margin-top: 36px;
   align-items: start;
 }
@@ -242,8 +241,7 @@ button.profile-stat:hover {
   max-width: 140px;
   cursor: pointer;
 }
-.filter-select select:focus-visible,
-.library-search:focus-within {
+.filter-select select:focus-visible, .library-search:focus-within {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
@@ -288,8 +286,7 @@ button.profile-stat:hover {
   font-size: 12px;
   gap: 12px;
 }
-.text-button,
-.entry-action {
+.text-button, .entry-action {
   border: 0;
   padding: 3px 0;
   background: transparent;
@@ -301,12 +298,10 @@ button.profile-stat:hover {
   gap: 5px;
   min-height: 36px;
 }
-.text-button:hover,
-.entry-action:hover {
+.text-button:hover, .entry-action:hover {
   text-decoration: underline;
 }
-.text-button:disabled,
-.entry-action:disabled {
+.text-button:disabled, .entry-action:disabled {
   cursor: wait;
   opacity: 0.6;
 }
@@ -355,8 +350,7 @@ button.profile-stat:hover {
   font-size: 14px;
   min-height: 44px;
 }
-.content-list,
-.people-list {
+.content-list, .people-list {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -608,8 +602,7 @@ button.profile-stat:hover {
   color: var(--muted);
   margin-bottom: 12px;
 }
-.rail-settings > a,
-.rail-settings > button {
+.rail-settings > a, .rail-settings > button {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -625,8 +618,7 @@ button.profile-stat:hover {
 .rail-settings > a > svg:last-child {
   margin-left: auto;
 }
-.rail-settings > a:hover,
-.rail-settings > button:hover {
+.rail-settings > a:hover, .rail-settings > button:hover {
   color: var(--primary);
   text-decoration: none;
 }
@@ -754,19 +746,10 @@ button.profile-stat:hover {
 .article-actions .el-button {
   margin-left: 0;
 }
-.personal-center .el-button,
-.account-subpage .el-button,
-.profile-edit,
-.filter-select select,
-.library-search button,
-.text-button,
-.entry-action,
-.follow-button,
-.feedback-close {
+.personal-center .el-button, .account-subpage .el-button, .profile-edit, .filter-select select, .library-search button, .text-button, .entry-action, .follow-button, .feedback-close {
   min-height: 44px;
 }
-.library-search button,
-.feedback-close {
+.library-search button, .feedback-close {
   min-width: 44px;
 }
 @media (max-width: 1023px) {
@@ -824,8 +807,7 @@ button.profile-stat:hover {
     min-width: 0;
     flex-basis: calc(100% - 74px);
   }
-  .profile-edit,
-  .profile-identity > .follow-button {
+  .profile-edit, .profile-identity > .follow-button {
     margin: 0 0 0 74px;
     min-height: 44px;
   }
@@ -933,9 +915,70 @@ button.profile-stat:hover {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .personal-center *,
-  .account-subpage * {
+  .personal-center *, .account-subpage * {
     transition: none !important;
     animation: none !important;
+  }
+}
+/* Personal reading space retains its existing profile/list/rail hierarchy. */
+.account-page-heading {
+  margin: 0 0 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.account-page-heading p {
+  font-size: 22px;
+}
+.profile-description h1 {
+  font-family: var(--font-reading);
+  font-weight: 500;
+}
+.account-library {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+}
+.library-tabs {
+  gap: 24px;
+}
+.rail-section {
+  padding: 24px 0;
+}
+.rail-section:first-child {
+  padding-top: 0;
+}
+.knowledge-library-note {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.entry-title {
+  font-size: 19px;
+}
+.profile-hero .profile-stats {
+  padding-top: 16px;
+  border-top: 1px solid #d0dbca;
+}
+.account-subpage > .page-heading {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 767px) {
+  .personal-center-layout {
+    grid-template-columns: minmax(0,1fr);
+    gap: 28px;
+  }
+  .account-library {
+    padding: 20px 16px;
+  }
+  .library-tabs {
+    gap: 18px;
+    overflow-x: auto;
+  }
+  .account-page-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 8px;
   }
 }

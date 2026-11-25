@@ -28,6 +28,8 @@ it.each([
     { path: "/login", component: { template: "<p>登录页</p>" } },
     { path: "/account", component: { template: "<p>个人中心</p>" } },
     { path: "/community", component: { template: "<p>社区</p>" } },
+    { path: "/contribute", component: { template: "<p>贡献工作台</p>" } },
+    { path: "/account/articles/new", component: { template: "<p>文章发布入口</p>" } },
   ] });
   vi.spyOn(api.http, "get").mockImplementation(async (url) => {
     if (url === "/community/text-policy") return { data: { data: testPolicy } };

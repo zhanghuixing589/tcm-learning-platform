@@ -1,0 +1,23 @@
+# 公共内容、版本与审核
+
+V10分类补充（2026-11-25）：知识稿件目录必须属于其固定类型，标签仍通过revision_tags跨类型关联并绑定版本。KnowledgeService.publicationReady在原提交/审核编排中检查目录及标签有效性并取得共享锁；管理员停用后待审稿需退回修订，已发布阅读/收藏不受影响。旧目录归档不改冻结版本引用。契约见contracts/knowledge-taxonomy.md，迁移及回归新增KnowledgeTaxonomyIntegrationTest/KnowledgeTaxonomyMigrationTest。
+
+状态：通用资源版本、来源/知识/基础文章审核已实现；第三阶段专业意见复用与治理增强仍是方案。依据：第二阶段 spec、第三阶段 spec 和 `docs/03-数据库关系与业务规则.md` 对应内容规则。
+
+## 结构与数据
+
+content 包的 ContentSupport 提供通用数据和权限支持，ReviewController / ReviewService 编排审核；知识写入在 KnowledgeService，文章写入在 PersonalCenterService，来源流程在 SourceService。前端 ReviewView / ReviewsView / FeedbackQueue 均位于 knowledge 目录。
+
+content_resources 是稳定资源身份，content_revisions 保存版本；revision_evidence 绑定来源依据；review_tasks / review_events 保存审核任务和历史。引用、公开指针与状态不能仅按页面所在目录归属。
+
+## 状态和权限
+
+编辑草稿 → 提交冻结 → 待审任务 → 领取/决策 → 发布或退回；领取/决策携带 lockVersion，过时版本应冲突。既有正式版与待审修改隔离，不以修订替换原公开版。精确枚举读取 ReviewDtos / ReviewService 和提交方实现。
+
+ReviewService 按任务对象区分 knowledge:review 和 community:moderate，并禁止本人审核。不能从 ADMIN 角色推导医学审核权。公开知识还需要有效来源/证据，审核通过不等于后续检索索引就绪。
+
+## 契约与回归
+
+`/reviews` 及任务详情、领取、决策，精确路由见 ReviewController；资源修订、文章提交和知识草稿并非都由 ReviewController 提供。维护契约时必须同时核对三个消费者。
+
+KnowledgeWorkflowIntegrationTest、SourceWorkflowIntegrationTest、PersonalCenterIntegrationTest，前端 ReviewView.test.ts / FeedbackQueue.test.ts。重点验证自审、越权、版本冲突、重复决策、退回重提、来源失效和旧公开版保留。任何通用审核修改都进入共享回归组。

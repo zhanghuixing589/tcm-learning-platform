@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import { api, errorMessage } from "../../shared/api/client";
 import type { Envelope, Page, RoleApplication } from "../../shared/api/types";
 import { useSessionStore } from "../../shared/stores/session";
+import StatusBadge from "../../app/ui/StatusBadge.vue";
 const session = useSessionStore();
 const items = ref<RoleApplication[]>([]),
   statement = ref(""),
@@ -67,6 +68,7 @@ async function submit() {
       <p class="muted">让你掌握的知识，成为更多人可靠的学习起点。</p>
     </div>
   </div>
+  <ol class="application-steps" aria-label="申请流程"><li><span>01</span><strong>介绍你的背景</strong><small>说明学习经历与资料来源</small></li><li><span>02</span><strong>等待资格审核</strong><small>在申请记录中查看处理意见</small></li><li><span>03</span><strong>开始知识共建</strong><small>通过后前往贡献工作台</small></li></ol>
   <p v-if="error" class="error-message" role="alert">{{ error }}</p>
   <p v-if="success" class="success-message" role="status">{{ success }}</p>
   <div class="account-grid">
@@ -108,8 +110,8 @@ async function submit() {
       <ul v-else class="history-list">
         <li v-for="item in items" :key="item.id">
           <div class="row-between">
-            <strong>{{ labels[item.status] }}</strong
-            ><time class="muted">{{
+            <StatusBadge :state="item.status" :label="labels[item.status] || item.status" />
+            <time class="muted">{{
               new Date(item.createdAt).toLocaleDateString("zh-CN", {
                 timeZone: "Asia/Shanghai",
               })

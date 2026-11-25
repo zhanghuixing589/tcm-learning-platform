@@ -6,6 +6,7 @@ import { useWorkspace } from "./useWorkspace";
 import WorkspaceState from "./WorkspaceState.vue";
 import PaginationBar from "./PaginationBar.vue";
 import "./stage.css";
+import StatusBadge from "../../app/ui/StatusBadge.vue";
 const route = useRoute(),
   router = useRouter(),
   { loading, busy, error, actionError, message, load, act } = useWorkspace();
@@ -111,8 +112,7 @@ watch(() => route.fullPath, refresh, { immediate: true });
           <div class="stage-meta">
             <span class="stage-tag">{{
               item.jobType === "PARSE" ? "资料解析" : "知识索引"
-            }}</span><span>{{ stateLabels[item.status] || item.status }}</span
-            ><span>任务 {{ item.id }}</span>
+            }}</span><StatusBadge :state="item.status" :label="stateLabels[item.status] || item.status" /><span>任务 {{ item.id }}</span>
           </div>
           <p v-if="item.jobType !== 'PARSE'">等待第四阶段索引服务</p>
           <p v-if="item.lastError || item.errorMessage" class="error-message">

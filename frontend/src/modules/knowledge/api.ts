@@ -40,7 +40,13 @@ export const sourceTypeLabels: Record<string, string> = {
   COMMUNITY: "社区资料",
   OTHER: "其他",
 };
+export interface KnowledgeTag { id:string; name:string; active:boolean; lockVersion?:number; }
 export interface Category {
+  type?: KnowledgeType | null;
+  active?: boolean;
+  legacy?: boolean;
+  sortOrder?: number;
+  lockVersion?: number;
   id: string;
   name: string;
   code: string;
@@ -137,6 +143,7 @@ export interface FormulaFacts {
   precautions: string;
 }
 export interface KnowledgeInput {
+  tagIds?: string[];
   type: KnowledgeType;
   canonicalName: string;
   title: string;
@@ -151,6 +158,9 @@ export interface KnowledgeInput {
   relations: Relation[];
 }
 export interface KnowledgeSummary {
+  categoryLegacy?: boolean;
+  categoryActive?: boolean;
+  tags?: KnowledgeTag[];
   id: string;
   revisionId: string;
   type: KnowledgeType;
@@ -179,6 +189,10 @@ export interface KnowledgeDetail extends KnowledgeSummary {
   reviewNote: string | null;
   changeNote?: string;
 }
+// The public search endpoint already returns these filtered detail fields.
+// Optional fields preserve compatibility with existing summary-only consumers.
+export type KnowledgeCatalogEntry = KnowledgeSummary & Partial<Pick<KnowledgeDetail,
+  'aliases' | 'herb' | 'formula' | 'ingredients' | 'evidence' | 'relations'>>;
 export interface Review {
   id: string;
   revisionId: string | null;
@@ -266,9 +280,10 @@ export async function patch<T>(url: string, body: unknown): Promise<T> {
   return (await api.http.patch<Envelope<T>>(url, body)).data.data;
 }
 export const stageApi = {
-  categories: () => get<Category[]>("/knowledge/categories"),
+  categories: (type?: string) => get<Category[]>("/knowledge/categories", type ? {type} : {}),
+  tags: () => get<KnowledgeTag[]>("/knowledge/tags"),
   knowledge: (params: Query = {}) =>
-    get<Page<KnowledgeSummary>>("/knowledge", params),
+    get<Page<KnowledgeCatalogEntry>>("/knowledge", params),
   detail: (id: string) => get<KnowledgeDetail>(`/knowledge/${id}`),
   relations: (id: string) => get<Relation[]>(`/knowledge/${id}/relations`),
   drafts: (params: Query = {}) =>

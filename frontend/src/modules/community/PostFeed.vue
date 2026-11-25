@@ -1,33 +1,41 @@
 <script setup lang="ts">
 import { onBeforeUnmount, reactive, ref, watch } from "vue";
 import type { Page } from "../../shared/api/types";
-import { formatDate, latestRequest } from "../account/personalCenter";
-import UserAvatar from "../account/UserAvatar.vue";
+import { latestRequest } from "../account/personalCenter";
 import { communityApi } from "./api";
 import { characterCount, communityError } from "./editor";
 import type { Post, PostFilter, PostQuery, PostSort, Section } from "./types";
 import CommunityPageBar from "./CommunityPageBar.vue";
+import CommunityPostCard from "./CommunityPostCard.vue";
 
 const props = defineProps<{ section?: Section }>();
+const emit = defineEmits<{ loaded: [result: Page<Post> | null] }>();
 const form = reactive({ q: "", type: "ALL" as PostFilter, sort: "NEWEST" as PostSort, includeChildren: true });
 const submitted = ref<PostQuery>({});
 const list = ref<Page<Post> | null>(null);
 const error = ref("");
 const loading = ref(false);
+const requestedPage = ref(1);
 const requests = latestRequest();
 
 async function load(page = 1) {
   const ticket = requests.begin();
+  requestedPage.value = page;
   loading.value = true;
   error.value = "";
+  emit("loaded", null);
   try {
     const result = await communityApi.posts({ ...submitted.value, sectionId: props.section?.id, page });
-    if (requests.isCurrent(ticket)) list.value = result;
+    if (requests.isCurrent(ticket)) { list.value = result; emit("loaded", result); }
   } catch (cause) {
     if (requests.isCurrent(ticket)) error.value = communityError(cause);
   } finally {
     if (requests.isCurrent(ticket)) loading.value = false;
   }
+}
+function selectType(value: PostFilter) {
+  form.type = value;
+  search();
 }
 function search() {
   const q = form.q.trim();
@@ -38,6 +46,7 @@ function search() {
   submitted.value = { q: q || undefined, type: form.type, sort: form.sort, includeChildren: form.includeChildren };
   void load();
 }
+watch(() => [form.sort, form.includeChildren], () => search());
 watch(() => props.section?.id, () => {
   list.value = null;
   search();
@@ -47,17 +56,14 @@ onBeforeUnmount(requests.invalidate);
 
 <template>
   <section class="community-list" aria-label="社区内容">
+    <nav class="community-feed-tabs" aria-label="内容发现类型">
+      <button v-for="tab in [{ value: 'ALL', label: '全部内容' }, { value: 'ARTICLE', label: '科普文章' }, { value: 'POST', label: '学习讨论' }]" :key="tab.value"
+        type="button" :aria-pressed="(submitted.type || 'ALL') === tab.value" @click="selectType(tab.value as PostFilter)">{{ tab.label }}</button>
+    </nav>
     <form class="community-filter" @submit.prevent="search">
       <div class="community-form-grid">
         <label class="community-field">搜索社区内容
           <input v-model="form.q" type="search" placeholder="搜索标题或正文" />
-        </label>
-        <label class="community-field">内容类型
-          <select v-model="form.type">
-            <option value="ALL">全部</option>
-            <option value="POST">讨论</option>
-            <option value="ARTICLE">科普文章</option>
-          </select>
         </label>
         <label class="community-field">排序
           <select v-model="form.sort">
@@ -76,28 +82,14 @@ onBeforeUnmount(requests.invalidate);
     <p v-if="loading" role="status" class="community-empty">正在读取社区内容…</p>
     <div v-if="error">
       <p role="alert" class="error-message">{{ error }}</p>
-      <button type="button" @click="load(list?.page || 1)">重新加载</button>
+      <button type="button" @click="load(requestedPage)">重新加载</button>
     </div>
-    <template v-if="list">
+    <template v-if="list && !loading && !error">
+      <div class="feed-heading"><h2>{{ section ? '分区里的声音' : '发现与讨论' }}</h2><span>{{ list.total }} 条内容</span></div>
       <p v-if="!list.items.length && !loading" class="community-empty">没有符合条件的内容。</p>
-      <ul class="community-rows">
+      <ul class="community-rows community-discovery-feed">
         <li v-for="item in list.items" :key="item.id">
-          <article class="community-row">
-            <div class="community-meta">
-              <span class="community-tag">{{ item.resourceType === 'ARTICLE' ? '科普文章' : '讨论' }}</span>
-              <span v-if="item.pinned">置顶</span>
-              <RouterLink v-if="item.section.code !== 'legacy-content'" :to="'/community/sections/' + item.section.id">{{ item.section.name }}</RouterLink>
-              <span v-else>{{ item.section.name }}</span>
-            </div>
-            <h3><RouterLink :to="'/community/posts/' + item.id">{{ item.title }}</RouterLink></h3>
-            <p v-if="item.summary">{{ item.summary }}</p>
-            <div class="community-meta">
-              <UserAvatar :nickname="item.owner.nickname" :url="item.owner.avatarUrl" />
-              <RouterLink :to="'/users/' + item.owner.id">{{ item.owner.nickname }}</RouterLink>
-              <time :datetime="item.publishedAt">{{ formatDate(item.publishedAt) }}</time>
-              <span>{{ item.commentCount }} 条评论</span><span>{{ item.likeCount }} 个赞</span>
-            </div>
-          </article>
+          <CommunityPostCard :item="item" />
         </li>
       </ul>
       <CommunityPageBar :result="list" :disabled="loading" @change="load" />

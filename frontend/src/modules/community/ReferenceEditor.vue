@@ -23,6 +23,8 @@ async function add() {
   document.getElementById("reference-title-" + item.referenceKey)?.focus();
 }
 function remove(key: string) {
+  const item = references.value.find(item => item.referenceKey === key);
+  if (props.readonly || !item || !window.confirm(`确定删除文献 [${item.displayNumber}] 吗？正文中的 [${item.displayNumber}] 引用不会自动移除，请核对后再保存。其余文献编号保持不变。`)) return;
   references.value = references.value.filter((item) => item.referenceKey !== key);
   if (active.value === key) active.value = "";
 }
@@ -33,18 +35,19 @@ const fields = [
 
 <template>
   <section aria-label="编辑参考文献" class="community-reference-editor">
-    <h2>参考文献</h2>
+    <div class="reference-heading"><h2>参考文献 <small>{{ references.length }} / {{ maxReferences }}</small></h2><button v-if="!readonly" class="reference-add" type="button" aria-label="添加参考文献" :disabled="references.length >= maxReferences" @click="add">＋ 添加参考文献</button></div>
     <p class="muted">
       已填写 {{ references.length }} / {{ maxReferences }} 条，文献字段合计上限 {{ maxReferenceChars }} 字符。
       Markdown 正文使用 [编号] 引用文献。删除条目前请核对正文中的对应引用。
     </p>
-    <ul class="community-rows">
+    <p v-if="!references.length" class="reference-empty muted">需要引证资料时，在这里添加文献，再用 [编号] 引用。</p>
+    <ul v-else class="community-rows reference-editor-list">
       <li v-for="item in references" :key="item.referenceKey" class="community-row">
-        <button type="button" :aria-expanded="active === item.referenceKey"
+        <button type="button" class="reference-toggle" :aria-controls="'reference-fields-' + item.referenceKey" :aria-expanded="active === item.referenceKey"
           @click="active = active === item.referenceKey ? '' : item.referenceKey">
-          [{{ item.displayNumber }}] {{ item.title || '编辑文献' }}
+          <span class="reference-number">[{{ item.displayNumber }}]</span><span>{{ item.title || '填写文献信息' }}</span><span class="reference-chevron" aria-hidden="true">{{ active === item.referenceKey ? '−' : '＋' }}</span>
         </button>
-        <fieldset v-if="active === item.referenceKey" :disabled="readonly">
+        <fieldset v-if="active === item.referenceKey" :id="'reference-fields-' + item.referenceKey" :disabled="readonly">
           <legend>文献 {{ item.displayNumber }}</legend>
           <label class="community-field">标题
             <input :id="'reference-title-' + item.referenceKey" :value="item.title"
@@ -64,6 +67,5 @@ const fields = [
         </fieldset>
       </li>
     </ul>
-    <button v-if="!readonly" type="button" :disabled="references.length >= maxReferences" @click="add">添加参考文献</button>
   </section>
 </template>

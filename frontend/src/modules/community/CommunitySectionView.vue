@@ -10,6 +10,8 @@ import SectionNavigation from "./SectionNavigation.vue";
 import SectionPanel from "./SectionPanel.vue";
 import "../account/account.css";
 import "./community.css";
+import CommunityCompanion from "./CommunityCompanion.vue";
+import type { Post } from "./types";
 
 const route = useRoute();
 const section = ref<Section | null>(null);
@@ -18,6 +20,7 @@ const loading = ref(true);
 const error = ref("");
 const navigationError = ref("");
 const requests = latestRequest();
+const posts = ref<Post[]>([]);
 
 async function refresh() {
   const ticket = requests.begin();
@@ -46,7 +49,7 @@ onBeforeUnmount(requests.invalidate);
 </script>
 
 <template>
-  <div class="community-page">
+  <div class="community-page community-discovery community-section-discovery">
     <RouterLink class="community-back" to="/community">返回科普社区</RouterLink>
     <p v-if="loading" role="status">正在读取分区…</p>
     <div v-if="error">
@@ -55,7 +58,7 @@ onBeforeUnmount(requests.invalidate);
       <button type="button" @click="refresh">重新加载</button>
     </div>
     <template v-if="section">
-      <header class="community-heading">
+      <header id="community-participate" class="community-heading">
         <div><h1>{{ section.name }}</h1><p v-if="!section.writable">只读分区</p></div>
         <div class="community-actions">
           <RouterLink v-if="section.capabilities.canPost"
@@ -66,15 +69,15 @@ onBeforeUnmount(requests.invalidate);
             class="community-button">向本区投稿</RouterLink>
         </div>
       </header>
-      <div class="community-layout">
+      <div class="community-discovery-layout">
         <div>
           <p v-if="navigationError" role="alert" class="error-message">{{ navigationError }}</p>
           <SectionNavigation v-else :groups="groups" />
         </div>
         <div>
-          <SectionPanel :key="section.id" :section-id="section.id" :initial="section" @updated="update" />
-          <PostFeed :key="'feed-' + section.id" :section="section" class="community-section-feed" />
+          <PostFeed :key="'feed-' + section.id" :section="section" class="community-section-feed" @loaded="posts = $event?.items || []" />
         </div>
+        <aside class="community-companion"><SectionPanel :key="section.id" :section-id="section.id" :initial="section" @updated="update" /><CommunityCompanion :groups="groups" :posts="posts" /></aside>
       </div>
     </template>
   </div>
