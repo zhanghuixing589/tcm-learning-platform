@@ -1,6 +1,13 @@
-param([int]$BackendPort=8080,[int]$FrontendPort=5173,[int]$AiPort=8000)
+param([int]$BackendPort,[int]$FrontendPort,[int]$AiPort)
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'Dev-Ports.ps1')
+$environmentPortOverrides=@{}
+foreach ($name in @('BackendPort','FrontendPort','AiPort')) {
+    if ($PSBoundParameters.ContainsKey($name)) { $environmentPortOverrides[$name]=$PSBoundParameters[$name] }
+}
+$environmentPorts=Get-DevPorts -ProjectRoot $projectRoot -Overrides $environmentPortOverrides
+$BackendPort=$environmentPorts.BackendPort; $FrontendPort=$environmentPorts.FrontendPort; $AiPort=$environmentPorts.AiPort
 $statePath=Join-Path $projectRoot 'runtime\dev-mysql.json'
 if (!(Test-Path -LiteralPath $statePath)) { throw 'Run python scripts/dev_mysql.py start first' }
 $state=Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
@@ -13,6 +20,7 @@ $env:DB_URL="jdbc:mysql://127.0.0.1:$($state.port)/tcm_stage_one?connectionTimeZ
 $env:DB_USERNAME='tcm_stage'; $env:DB_PASSWORD=$state.password
 $env:JWT_SECRET=$secrets.jwt; $env:AI_INTERNAL_TOKEN=$secrets.internal
 $env:COOKIE_SECURE='false'; $env:SERVER_PORT="$BackendPort"
+$env:SERVER_ADDRESS='127.0.0.1'
 $env:ALLOWED_ORIGINS="http://localhost:$FrontendPort,http://127.0.0.1:$FrontendPort"
 $env:AI_BASE_URL="http://127.0.0.1:$AiPort"; $env:BACKEND_URL="http://127.0.0.1:$BackendPort"
 $env:AI_BACKEND_URL="http://127.0.0.1:$BackendPort"

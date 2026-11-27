@@ -34,9 +34,13 @@ public interface IdentityMapper extends BaseMapper<UserAccount> {
     @Options(useGeneratedKeys=true,keyProperty="id") void apply(RoleApplication application);
     @Select("SELECT a.*,u.username FROM sys_role_applications a JOIN sys_users u ON u.id=a.user_id WHERE a.id=#{id}") RoleApplication application(long id);
     @Select("SELECT * FROM sys_role_applications WHERE id=#{id} FOR UPDATE") RoleApplication lockApplication(long id);
-    @Select("<script>SELECT a.*,u.username FROM sys_role_applications a JOIN sys_users u ON u.id=a.user_id <if test='user != null'>WHERE a.user_id=#{user}</if> ORDER BY a.id DESC LIMIT #{limit} OFFSET #{offset}</script>")
-    List<RoleApplication> applications(@Param("user")Long user,@Param("limit")int limit,@Param("offset")int offset);
-    @Select("<script>SELECT COUNT(*) FROM sys_role_applications <if test='user != null'>WHERE user_id=#{user}</if></script>") long applicationCount(@Param("user")Long user);
+    String APPLICATION_WHERE="<where><if test='user != null'>a.user_id=#{user}</if><choose>"
+            +"<when test='filter == &quot;PENDING&quot;'> AND a.status='PENDING'</when>"
+            +"<when test='filter == &quot;PROCESSED&quot;'> AND a.status IN ('APPROVED','REJECTED','WITHDRAWN')</when>"
+            +"</choose></where>";
+    @Select("<script>SELECT a.*,u.username FROM sys_role_applications a JOIN sys_users u ON u.id=a.user_id "+APPLICATION_WHERE+" ORDER BY a.id DESC LIMIT #{limit} OFFSET #{offset}</script>")
+    List<RoleApplication> applications(@Param("user")Long user,@Param("filter")String filter,@Param("limit")int limit,@Param("offset")int offset);
+    @Select("<script>SELECT COUNT(*) FROM sys_role_applications a "+APPLICATION_WHERE+"</script>") long applicationCount(@Param("user")Long user,@Param("filter")String filter);
     @Update("UPDATE sys_role_applications SET status=#{status},reviewer_id=#{reviewerId},review_note=#{reviewNote},reviewed_at=UTC_TIMESTAMP(3) WHERE id=#{id}") void decision(RoleApplication application);
     @Insert("INSERT INTO sys_audit_logs(actor_id,trace_id,action,object_type,object_key) VALUES(#{actor},#{trace},#{action},#{type},#{key})")
     void audit(@Param("actor")long actor,@Param("trace")String trace,@Param("action")String action,@Param("type")String type,@Param("key")String key);

@@ -167,8 +167,11 @@ public class IdentityService {
     }
 //    申请详情
     public PageResult<ApplicationView> applications(Long user,int page,int size) {
+        return applications(user,page,size,ApplicationFilter.ALL);
+    }
+    public PageResult<ApplicationView> applications(Long user,int page,int size,ApplicationFilter filter) {
         int offset=PageResult.offset(page,size);
-        return new PageResult<>(page,size,mapper.applicationCount(user),mapper.applications(user,size,offset).stream().map(this::applicationView).toList());
+        return new PageResult<>(page,size,mapper.applicationCount(user,filter.name()),mapper.applications(user,filter.name(),size,offset).stream().map(this::applicationView).toList());
     }
     //    申请审核
     @Transactional(isolation=Isolation.READ_COMMITTED)

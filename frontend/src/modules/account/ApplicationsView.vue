@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { api, errorMessage } from "../../shared/api/client";
 import type { Envelope, Page, RoleApplication } from "../../shared/api/types";
 import { useSessionStore } from "../../shared/stores/session";
 import StatusBadge from "../../app/ui/StatusBadge.vue";
+import RoleApplicationDetails from './RoleApplicationDetails.vue';
 const session = useSessionStore();
 const items = ref<RoleApplication[]>([]),
   statement = ref(""),
@@ -13,6 +14,10 @@ const items = ref<RoleApplication[]>([]),
   loading = ref(true),
   page = ref(1),
   total = ref(0);
+const details=ref<RoleApplication|null>(null),detailOpen=ref(false);
+let loadSequence=0;
+watch(()=>session.user?.id,()=>{++loadSequence;items.value=[];total.value=0;details.value=null;detailOpen.value=false;statement.value='';busy.value=false;error.value='';success.value='';loading.value=false;});
+onBeforeUnmount(()=>{++loadSequence;});
 const blocked = computed(
   () =>
     session.user?.roles.includes("CONTRIBUTOR") ||
@@ -25,23 +30,26 @@ const labels: Record<string, string> = {
   WITHDRAWN: "已撤回",
 };
 async function load() {
+  const sequence=++loadSequence,actor=session.user?.id;
   loading.value = true;
   error.value = "";
   try {
-    const { data } = await api.http.get<Envelope<Page<RoleApplication>>>(
+    const [{ data }] = await Promise.all([api.http.get<Envelope<Page<RoleApplication>>>(
       "/me/role-applications",
       { params: { page: page.value } },
-    );
+    ),session.reload()]);
+    if(sequence!==loadSequence || actor!==session.user?.id)return;
     items.value = data.data.items;
     total.value = data.data.total;
   } catch (e) {
-    error.value = errorMessage(e);
+    if(sequence===loadSequence && actor===session.user?.id)error.value = errorMessage(e);
   } finally {
-    loading.value = false;
+    if(sequence===loadSequence)loading.value = false;
   }
 }
 onMounted(load);
 async function submit() {
+  const actor=session.user?.id;
   busy.value = true;
   error.value = "";
   success.value = "";
@@ -50,14 +58,15 @@ async function submit() {
       roleCode: "CONTRIBUTOR",
       statement: statement.value,
     });
+    if(actor!==session.user?.id)return;
     statement.value = "";
     page.value = 1;
     await load();
-    success.value = "申请已提交，请等待管理员处理";
+    if(actor===session.user?.id)success.value = "申请已提交，请等待管理员处理";
   } catch (e) {
-    error.value = errorMessage(e);
+    if(actor===session.user?.id)error.value = errorMessage(e);
   } finally {
-    busy.value = false;
+    if(actor===session.user?.id)busy.value = false;
   }
 }
 </script>
@@ -102,7 +111,7 @@ async function submit() {
       >
     </section>
     <section class="account-aside">
-      <h2>申请记录</h2>
+      <div class="row-between"><h2>申请记录</h2><el-button :loading="loading" @click="load">刷新记录</el-button></div>
       <el-skeleton v-if="loading" :rows="3" animated />
       <p v-else-if="!items.length" class="muted">
         还没有申请记录。提交后，你可以在这里查看处理结果。
@@ -117,10 +126,12 @@ async function submit() {
               })
             }}</time>
           </div>
+          <p class="muted">申请 {{ item.id }} · {{ item.username }}</p>
           <p>{{ item.statement }}</p>
           <p v-if="item.reviewNote" class="muted">
             处理意见：{{ item.reviewNote }}
           </p>
+          <el-button link type="primary" :aria-label="`查看申请${item.id}详情`" @click="details=item;detailOpen=true">查看详情</el-button>
         </li>
       </ul>
       <el-pagination
@@ -133,4 +144,5 @@ async function submit() {
       />
     </section>
   </div>
+  <RoleApplicationDetails v-model="detailOpen" :application="details"/>
 </template>

@@ -1,4 +1,4 @@
-param([ValidateSet('start','stop')][string]$Action='start',[int]$BackendPort=8080,[int]$FrontendPort=5173,[int]$AiPort=8000,[string]$JavaHome='D:\develop\Java\jdk-17')
+param([ValidateSet('start','stop')][string]$Action='start',[int]$BackendPort,[int]$FrontendPort,[int]$AiPort,[string]$JavaHome='D:\develop\Java\jdk-17')
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path -Parent $PSScriptRoot
 $servicesPath=Join-Path $projectRoot 'runtime\dev-services.json'
@@ -14,10 +14,18 @@ if ($Action -eq 'stop') {
     Write-Host 'Project app processes stopped. Stop the isolated database separately with python scripts/dev_mysql.py stop.'
     exit 0
 }
+. (Join-Path $PSScriptRoot 'Dev-Ports.ps1')
+$launchLock=Enter-DevStartLock -ProjectRoot $projectRoot
+try {
 if (Test-Path -LiteralPath $servicesPath) { throw 'Project services are already recorded. Stop them before starting again.' }
-foreach ($port in @($BackendPort,$FrontendPort,$AiPort)) {
-    $listener=New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback,$port)
-    try { $listener.Start() } finally { $listener.Stop() }
+$portOverrides=@{}
+foreach ($name in @('BackendPort','FrontendPort','AiPort')) {
+    if ($PSBoundParameters.ContainsKey($name)) { $portOverrides[$name]=$PSBoundParameters[$name] }
+}
+$launchPorts=Get-DevPorts -ProjectRoot $projectRoot -Overrides $portOverrides
+$BackendPort=$launchPorts.BackendPort; $FrontendPort=$launchPorts.FrontendPort; $AiPort=$launchPorts.AiPort
+foreach ($name in @('BackendPort','FrontendPort','AiPort')) {
+    Assert-DevPortAvailable -Port $launchPorts[$name] -Service $name
 }
 $jar=Join-Path $projectRoot 'backend\target\tcm-platform-0.1.0.jar'
 if (!(Test-Path -LiteralPath $jar)) { throw 'Build backend first: scripts/test-backend.ps1' }
@@ -42,6 +50,12 @@ try {
     if (!$health -or $health.status -ne 'UP') { throw 'Backend readiness timed out; see runtime/backend.err.log and backend.out.log' }
     $aiHealth=Invoke-RestMethod -Uri "http://127.0.0.1:$AiPort/internal/v1/health/readiness" -Headers @{'X-Internal-Token'=$env:AI_INTERNAL_TOKEN} -TimeoutSec 5
     if ($aiHealth.data.status -ne 'UP') { throw 'AI service health failed' }
+    foreach ($service in $services) {
+        $startedProcess=Get-Process -Id $service.id -ErrorAction SilentlyContinue
+        if (!$startedProcess -or $startedProcess.StartTime.ToUniversalTime().Ticks.ToString() -ne $service.startedTicks) { throw "$($service.service) exited during startup; inspect its runtime log" }
+    }
+    $frontendHealth=Invoke-WebRequest -Uri "http://127.0.0.1:$FrontendPort/" -UseBasicParsing -TimeoutSec 5
+    if ($frontendHealth.StatusCode -ne 200) { throw 'Frontend health failed' }
     $descendants=@()
     foreach ($service in $services) {
         foreach ($child in (Get-CimInstance Win32_Process -Filter "ParentProcessId=$($service.id)" -ErrorAction SilentlyContinue)) {
@@ -56,3 +70,4 @@ try {
     if (Test-Path -LiteralPath $servicesPath) { Remove-Item -LiteralPath $servicesPath }
     throw
 }
+} finally { $launchLock.Dispose() }

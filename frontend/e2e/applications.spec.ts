@@ -1,0 +1,105 @@
+import {test,expect} from '@playwright/test';
+import {readFileSync,mkdirSync} from 'node:fs';
+
+test('self review is blocked before opening and modal errors stay visible',async({browser,baseURL})=>{
+ test.setTimeout(120000);
+ const credentials=JSON.parse(readFileSync('../runtime/e2e-admin.json','utf8').replace(/^\uFEFF/,''));
+ const context=await browser.newContext({baseURL});
+ try{
+  const login=await context.request.post('/api/v1/auth/login',{data:{username:credentials.username,password:credentials.password}});
+  expect(login.status()).toBe(200);const actor=(await login.json()).data.user;
+  const page=await context.newPage(),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  const fixture={id:'self-fixture',userId:actor.id,username:actor.username,roleCode:'CONTRIBUTOR',status:'PENDING',statement:'合成本人申请说明',reviewerId:null,reviewNote:null,reviewedAt:null,createdAt:'2026-11-27T01:00:00Z'};
+  const other={...fixture,id:'other-fixture',userId:'999999999',username:'other_fixture',statement:'合成他人申请说明'};
+  await page.route('**/api/v1/admin/role-applications?*',route=>route.fulfill({json:{code:'OK',data:{page:1,pageSize:20,total:2,items:[fixture,other]}}}));
+  let decisionRequests=0;
+  await page.route('**/api/v1/admin/role-applications/*',route=>{
+   decisionRequests++;
+   return route.fulfill({status:409,json:{code:'CONFLICT',message:'该申请已由其他管理员处理，请刷新列表',traceId:'modal-error-fixture'}});
+  });
+  await page.goto('/admin/applications');
+  const own=page.getByRole('row').filter({hasText:actor.username});
+  await expect(own.getByRole('button',{name:'处理申请',exact:true})).toBeDisabled();
+  await expect(own).toContainText('本人申请，需其他管理员处理');
+  await own.getByRole('button',{name:'查看申请self-fixture详情',exact:true}).click();
+  const details=page.getByRole('dialog',{name:'资格申请详情'});
+  await expect(details).toContainText('本人申请，需其他管理员处理');
+  await expect(details.getByRole('button',{name:'处理申请',exact:true})).toHaveCount(0);
+  expect(decisionRequests).toBe(0);await details.getByRole('button',{name:'关闭详情',exact:true}).click();
+  await page.getByRole('row').filter({hasText:'other_fixture'}).getByRole('button',{name:'处理申请',exact:true}).click();
+  const form=page.getByRole('dialog',{name:'处理贡献资格申请'});
+  await form.getByLabel('处理意见（必填）',{exact:true}).fill('失败后仍保留的处理意见');
+  await form.getByRole('button',{name:'通过申请',exact:true}).click();
+  await expect(form.getByRole('alert')).toContainText('该申请已由其他管理员处理');
+  await expect(form.getByRole('alert')).toBeFocused();
+  await expect(form.getByLabel('处理意见（必填）',{exact:true})).toHaveValue('失败后仍保留的处理意见');
+  expect(decisionRequests).toBe(1);
+  mkdirSync('../runtime/application-self-review-browser',{recursive:true});
+  await form.screenshot({path:'../runtime/application-self-review-browser/decision-desktop.png'});
+  await page.setViewportSize({width:390,height:844});await expect(form.getByRole('alert')).toBeInViewport();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await form.screenshot({path:'../runtime/application-self-review-browser/decision-mobile.png'});
+  await form.getByRole('button',{name:'取消',exact:true}).click();
+  await page.setViewportSize({width:1280,height:800});
+  await page.route('**/api/v1/admin/users?*',route=>route.fulfill({json:{code:'OK',data:{page:1,pageSize:20,total:1,items:[{id:'role-fixture',username:'role_fixture',nickname:'合成用户',status:'ACTIVE',bio:null,roles:['LEARNER'],permissions:[],createdAt:'2026-11-27T01:00:00Z'}]}}}));
+  await page.route('**/api/v1/admin/users/*/roles',route=>route.fulfill({status:403,json:{code:'FORBIDDEN',message:'当前无权修改角色',traceId:'role-error-fixture'}}));
+  await page.goto('/admin/users');await page.getByRole('button',{name:'角色设置',exact:true}).click();
+  const roles=page.getByRole('dialog',{name:'角色设置'});
+  await roles.getByText('贡献者',{exact:true}).click();
+  await roles.getByRole('button',{name:'保存角色',exact:true}).click();
+  await expect(roles.getByRole('alert')).toContainText('当前无权修改角色');
+  await expect(roles.getByRole('alert')).toBeFocused();
+  await expect(roles.getByLabel('贡献者',{exact:true})).toBeChecked();
+  expect(errors).toEqual([]);
+ }finally{await context.close();}
+});
+
+test('application details and server filters preserve approval and personal ownership',async({browser,baseURL})=>{
+ test.setTimeout(120000);
+ const admin=JSON.parse(readFileSync('../runtime/e2e-admin.json','utf8').replace(/^\uFEFF/,''));
+ const manager=await browser.newContext({baseURL}),learner=await browser.newContext({baseURL});
+ try{
+  expect((await manager.request.post('/api/v1/auth/login',{data:{username:admin.username,password:admin.password}})).status()).toBe(200);
+  const username=`application_${Date.now()}`,password='ApplyPass12!';
+  expect((await learner.request.post('/api/v1/auth/register',{data:{username,password,nickname:'资格详情验收用户'}})).status()).toBe(201);
+  expect((await learner.request.post('/api/v1/auth/login',{data:{username,password}})).status()).toBe(200);
+  const own=await learner.newPage(),review=await manager.newPage();
+  const errors:string[]=[];own.on('pageerror',e=>errors.push(e.message));review.on('pageerror',e=>errors.push(e.message));
+  await own.goto('/applications');
+  await own.getByLabel('申请说明',{exact:true}).fill('合成申请说明第一段\n第二段用于验证完整详情。');
+  const response=own.waitForResponse(r=>r.url().endsWith('/api/v1/me/role-applications')&&r.request().method()==='POST');
+  await own.getByRole('button',{name:'提交申请',exact:true}).click();
+  const id=(await (await response).json()).data.id;
+  await own.getByRole('button',{name:`查看申请${id}详情`,exact:true}).click();
+  await expect(own.getByRole('dialog',{name:'资格申请详情'})).toContainText(username);
+  await expect(own.getByRole('dialog',{name:'资格申请详情'})).toContainText('第二段用于验证完整详情。');
+  await own.getByRole('button',{name:'关闭详情',exact:true}).click();
+  await review.goto('/admin/applications');
+  await review.getByRole('button',{name:'待处理',exact:true}).click();
+  await review.getByRole('button',{name:`查看申请${id}详情`,exact:true}).click();
+  const details=review.getByRole('dialog',{name:'资格申请详情'});
+  await expect(details).toContainText(username);await expect(details).toContainText('尚未处理');
+  await details.getByRole('button',{name:'处理申请',exact:true}).click();
+  const decision=review.getByRole('dialog',{name:'处理贡献资格申请'});
+  await decision.getByLabel('处理意见（必填）',{exact:true}).fill('合成资格申请验收通过');
+  await decision.getByRole('button',{name:'通过申请',exact:true}).click();
+  await expect(review.getByRole('button',{name:`查看申请${id}详情`,exact:true})).toHaveCount(0);
+  await review.getByRole('button',{name:'已处理',exact:true}).click();
+  await review.getByRole('button',{name:`查看申请${id}详情`,exact:true}).click();
+  await expect(details).toContainText('合成资格申请验收通过');await expect(details).toContainText('已通过');
+  mkdirSync('../runtime/application-details-browser',{recursive:true});
+  await details.screenshot({path:'../runtime/application-details-browser/admin-desktop.png'});
+  await review.setViewportSize({width:390,height:844});
+  await expect(details).toBeVisible();
+  const mobileNote=details.getByText('合成资格申请验收通过',{exact:true});
+  await mobileNote.scrollIntoViewIfNeeded();await expect(mobileNote).toBeInViewport();
+  await expect(details.getByRole('button',{name:'关闭详情',exact:true})).toBeInViewport();
+  expect(await review.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await details.screenshot({path:'../runtime/application-details-browser/admin-mobile.png'});
+  await own.getByRole('button',{name:'刷新记录',exact:true}).click();
+  await expect(own.getByText('你已具备贡献资格。',{exact:true})).toBeVisible();
+  await own.getByRole('button',{name:`查看申请${id}详情`,exact:true}).click();
+  await expect(own.getByRole('dialog',{name:'资格申请详情'})).toContainText('合成资格申请验收通过');
+  expect(errors).toEqual([]);
+ }finally{await manager.close();await learner.close();}
+});

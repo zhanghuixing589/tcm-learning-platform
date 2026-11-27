@@ -29,6 +29,10 @@ source新增backend/.../source/EpubFiles.java与ai-service/app/epub.py；由Sour
 
 ## 更新与定位
 
+资格申请详情与状态分组：F/modules/account/RoleApplicationDetails.vue由ApplicationsView与AdminApplicationsView复用；F/modules/account/ApplicationsView.test.ts验证两页；GET /admin/role-applications新增可选status=ALL/PENDING/PROCESSED，列表/count共用IdentityMapper.APPLICATION_WHERE。依赖与边界见docs/modules/identity.md、contracts/README.md；个人列表归属与原审批权限不变。
+
+本地多工作区端口入口：`scripts/Dev-Ports.ps1`（由dev.ps1、Import-DevEnvironment.ps1、check-env.ps1共用），配置为各工作区ignored `runtime/dev-ports.json`；规则见`docs/modules/platform.md`与`docs/workflow/README.md`，行为验证合并于`scripts/tests/workflow.Tests.ps1`。
+
 数据库定义入口：`backend/src/main/resources/db/migration/`；V1 为69表基线，V4/V5新增表，不能只读旧字典推断当前结构。接口总览：`contracts/README.md`；当前精确字段/状态由 Controller、DTO、前端类型及测试交叉核对。
 
 补充公共表归属：`content_categories`、`content_tags`、`revision_tags` 属于 content 公共分类/标签与版本关联，由知识等模块复用；`user_notifications` 属于 platform 通知数据设计，已建表但不据此认定通知服务/API 已实现。结合上表覆盖当前 V1–V6 的全部73张业务表。

@@ -19,7 +19,8 @@ public class AdminIdentityController {
     @PutMapping("/users/{id}/roles") @PreAuthorize("hasAuthority('system:role:manage')")
     public ApiResponse<?> roles(Principal actor,@PathVariable long id,@Valid @RequestBody IdentityDtos.Roles input) {return ApiResponse.ok(service.roles(Long.parseLong(actor.getName()),id,input));}
     @GetMapping("/role-applications") @PreAuthorize("hasAuthority('system:user:manage')")
-    public ApiResponse<?> applications(@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="20")int pageSize) {return ApiResponse.ok(service.applications(null,page,pageSize));}
+    public ApiResponse<?> applications(@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="20")int pageSize,
+                                      @RequestParam(defaultValue="ALL")IdentityDtos.ApplicationFilter status) {return ApiResponse.ok(service.applications(null,page,pageSize,status));}
     @PatchMapping("/role-applications/{id}") @PreAuthorize("hasAuthority('system:user:manage')")
     public ApiResponse<?> decide(Principal actor,@PathVariable long id,@Valid @RequestBody IdentityDtos.Decision input) {return ApiResponse.ok(service.decide(Long.parseLong(actor.getName()),id,input));}
 }

@@ -41,11 +41,12 @@ export default defineConfig({
     ],
   },
   server: {
-    port: 5173,
+    host: '127.0.0.1',
+    port: 5177,
     strictPort: true,
     proxy: {
       "/api": {
-        target: process.env.BACKEND_URL || "http://127.0.0.1:8080",
+        target: process.env.BACKEND_URL || "http://127.0.0.1:8084",
         changeOrigin: true,
       },
     },

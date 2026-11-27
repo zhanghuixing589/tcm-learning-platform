@@ -1,5 +1,33 @@
 # 开发状态
 
+## 已完成：管理端自审入口与弹窗错误（2026-11-27）
+
+- 用户复现本人申请仍能打开处理表单，后端拒绝自审的错误显示在弹窗后方。根因是UI只判断PENDING，未比较userId；decide失败又使用页面顶部error。保留本人记录可读，不过滤列表；本人待处理按钮禁用且显示“本人申请，需其他管理员处理”，详情移除自审动作，select/decide均防御性校验。审批错误移到弹窗表单前，滚动/聚焦提示并保留意见；AdminUsers角色保存失败同样放进角色弹窗。
+- 截图所示字段有真实数据，改动前vue-tsc已通过（runtime/application-self-review-type-before.log）；两页改为明确类型的计算属性/状态函数，未修改字段或绕过类型检查。未现场验证IDE诊断是否刷新。后端/API/审批规则/迁移均未修改，已有未提交改动全部保留，未提交推送。
+- 新专项先RED再GREEN，最终ApplicationsView.test 6项通过；前端全量42文件196项及vue-tsc/Vite通过，证据runtime/workflow/20261127-141444-294-59f9859b/result.json；后端explicitRoleGrantIsAuditedAndSelfReviewIsRejected 1项通过（runtime/application-self-review-backend.log）。本轮前后后端diff经换行规范化比较相同，依赖锁/tsconfig/client/types哈希相同，复用上轮215项后端完整结果，未重复迁移回归。
+- 首次浏览器两项因5177 ECONNREFUSED失败：当时三端应用进程均已退出、记录PID/启动时间均不匹配，未冒充业务通过。已备份失效记录，按dev.ps1安全清理并恢复5177/8084/8004，后端UP，数据库/MinIO保留。就绪复验中，自审/审核错误步骤成功，角色检查因测试脚本点击隐藏的原生checkbox超时；改为点击真实可见标签，保留失败日志，未强制点击或修改组件交互。
+- 最终runtime/application-self-review-browser-final.log两项全部通过（40.9s）：合成只读本人记录禁用且无审批请求、409审核错误在弹窗表单前/自动聚焦/意见保留、390px错误可见且无横向溢出、403角色错误在角色弹窗内/选择保留；以及真实新账号提交→他人审批→本人资格同步流程。pageerror=0；合成错误响应不宣称真实后台故障，后端真实自审拒绝由上述JUnit专项验证。截图runtime/application-self-review-browser/，未改写既有账号或申请。
+- 本次增量差异及调用者、新测试已自审，无未处理的本次范围问题；git diff --check通过。runtime/application-self-review-final.json记录前端200、后端UP、后端源码差异未变与前端完整回归通过。当前http://127.0.0.1:5177/admin/applications可刷新使用，未提交推送。
+
+## 已完成：资格申请详情与筛选（2026-11-27）
+
+- 用户要求申请记录可点开详情，管理端可筛选已处理/待处理。个人ApplicationsView与AdminApplicationsView复用RoleApplicationDetails，显示申请编号、申请人、状态、完整说明/处理意见、提交/处理时间；手机弹窗内容内部滚动，关闭按钮保留可见。个人记录新增刷新并同步/me资格，不修改既有账号、申请或角色规则。
+- 管理端ALL/PENDING/PROCESSED服务端筛选，IdentityDtos.ApplicationFilter→Controller→Service→Mapper.APPLICATION_WHERE，列表与total同条件；个人列表仍仅本人；状态切换回第一页，审批后空尾页回到有效页；详情无新增跨用户读取接口。补齐reviewerId/reviewedAt前端类型，换号清理详情/说明与旧异步响应防护。无迁移、依赖或审核权限变更；此前端口任务修改全部保留，未提交推送。
+- 专项：前端ApplicationsView.test先RED后GREEN，最终3项通过（runtime/application-details-targeted-final.log），含空尾页回退；后端applicationFiltersUseMatchingCountsAndPreserveOwnershipAndPermissions先RED（筛选总数不匹配）后GREEN，涵盖分组/total/分页/非法参数/无权/本人归属。日志runtime/application-{details,filter}-*.log。初次vue-tsc行类型失败已用显式RoleApplication修正；最终构建通过。初次打包因Windows运行JAR锁定失败，dev.ps1安全停应用后打包成功并以5177/8084/8004恢复；MySQL/MinIO未停止。
+- 浏览器frontend/e2e/applications.spec.ts：完整新合成账号申请→本人详情→管理员待处理详情/审批→已处理详情→本人刷新资格与意见通过；手机390px无横向溢出、处理意见可滚动到视口且关闭按钮保持可见，pageerror=0。初次服务未就绪代理500保留未计通过；最终稳定代码1项通过（runtime/application-details-browser-current.log，截图runtime/application-details-browser/）。未改写既有申请；验收仅新增application_前缀合成账号及申请，保留供复核。
+- 已同步contracts/README.md、MODULE_INDEX、docs/modules/identity.md；本轮代码/调用者/契约及新文件自审完成，无未处理的本次范围问题，git diff --check通过。保守计划runtime/application-details-final-plan.json，全层回归runtime/workflow/20261127-105235-376-9b7dd05a/result.json为selected-checks-passed，5步骤退出0：workflow51、后端215（0失败/0跳过）、前端42文件193项、vue-tsc/Vite、AI62通过/10既有条件跳过。跳过不计通过，未跑全业务浏览器E2E。
+- 当前入口http://127.0.0.1:5177/applications、http://127.0.0.1:5177/admin/applications；新JAR运行，服务健康/产物SHA见runtime/application-details-final-health.json。旧账号/申请与此前端口修改保留，未提交推送。本轮已交付，后续仅按反馈定向调整。
+
+## 已完成：开发端口隔离（2026-11-27）
+
+- 主工作区默认5177/8084/8004，后端固定127.0.0.1；Dev-Ports统一启动/环境导入/check-env解析，Vite与Playwright及示例环境同步主站入口。MinIO保持19000/19001→容器9000/9001，不改网络或其他程序。
+- 独立worktree须runtime/dev-ports.json或三个完整显式参数；旧stage-three-batch-one已定向同步启动/导入/前端配置与共享helper，本地ignored配置15178/18085/18005，历史失效dev-services记录备份后由安全停止入口清理；未启动旧应用或改写旧库。
+- 新增端口整数/范围/重复校验、占用服务/端点/PID提示、不自动跳号；同目录启动独占锁，成功前验证本次进程存活及前端HTTP。当前主站保持运行；Vite配置变更由开发服务器自动重载，未手动重启后端/AI或MinIO。未提交推送。
+- 专项workflow最终51项断言通过（runtime/port-fix-workflow-final.log），覆盖profile、worktree拒绝回退、显式覆盖、非法/重复/占用、锁互斥/释放、代理/回调/Origin与IPv4绑定。真实重复启动被拒绝且原记录哈希不变、锁释放（port-fix-launch-guard.json）；check-env通过，主站/后端/MinIO HTTP200；Playwright --list加载21条/9文件，仅列举未运行浏览器业务。
+- 保守全层计划已预览并执行：runtime/workflow/20261127-100804-243-d520fd30的后端214项中206通过、8失败，原因是IdentityIntegrationTest与CommunityWriteGuardIntegrationTest写死Origin=5173，而启动环境已切到5177。仅将这两个测试类改为读取实际SecurityProperties.allowedOrigins，保留恶意来源/CSRF拒绝断言；完整两类23项补验全部通过（runtime/workflow/20261127-103140-108-a20d5130）。不把首次失败改称通过，也不称最终同一命令全后端重跑。既有社区6项迁移/分类1项迁移均在首次全量通过。
+- 前端41文件190项、vue-tsc/Vite构建及AI 62通过/10按既有条件跳过，证据runtime/workflow/20261127-102325-210-7b00620d；10个跳过不计通过。旧worktree相同Origin测试定向同步，mvn -DskipTests test-compile成功（runtime/port-fix-isolated-compile.log），未运行旧库业务测试。当前真实CORS OPTIONS允许5177来源200、恶意来源403（port-fix-live-cors.json）。
+- 最终计划runtime/port-fix-final-plan.json；源码、调用者及两个工作区差异已自审，无未处理的本次范围问题；脚本检查及差异空白检查通过。当前入口http://127.0.0.1:5177/；后续本工作区直接dev.ps1 start使用固定默认端口，启动前如有既有服务仍需先使用本目录dev.ps1 stop。未重新执行浏览器业务E2E或重启后端/AI；测试结果仅适用于本次配置、环境和输入。
+
 ## 已完成：来源阅读第二版实施与验收（2026-11-27）
 
 - main / 849710e21c41ffcb08a22390e8cc0e81e22e4fc0；保留开始前EPUB、治理规划和全部工作区修改，未提交推送。D18取代下方历史“仅设计暂停”。[完整交付、命令、失败与适用边界](docs/workflow/tasks/2026-11-26-source-reading/acceptance.md)，契约contracts/source-reading-v2.md。

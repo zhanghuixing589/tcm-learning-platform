@@ -7,6 +7,8 @@
 - AuthController → IdentityService / TokenService / IdentityMapper：注册、登录、刷新轮换和退出。
 - AccountController 处理本人资料/贡献资格申请，AdminIdentityController 处理用户、角色及资格审批。前端 AuthView、ApplicationsView、modules/admin 与 session store 消费这些接口。
 - 主要表为 sys_users、角色/权限关联、sys_role_applications、auth_refresh_tokens；会话绝对期限由 V3 扩展，字段以当前迁移及 Mapper 为准。
+- 资格申请：ApplicationsView/RoleApplicationDetails提供本人记录详情、明确申请人/编号和状态刷新；AdminApplicationsView复用详情并按ALL/PENDING/PROCESSED服务端筛选、同步分页总数与审批后页码。筛选参数定义在IdentityDtos.ApplicationFilter；Mapper的APPLICATION_WHERE由列表与count共用。ApplicationsView.test覆盖详情、换号清理、筛选页码及异步旧结果；IdentityIntegrationTest覆盖真实SQL筛选/总数/归属/无权/无效参数。
+- 管理列表可保留本人申请供只读查看；AdminApplicationsView按userId与session.user.id识别本人，禁用本人待处理记录的处理入口、显示其他管理员处理提示，详情也不提供自审动作，select/decide仍防御性校验。审批错误保留在审核弹窗内并滚动/聚焦提示、保留处理意见；AdminUsersView的角色保存错误同样在角色弹窗内展示。两页以类型明确的计算属性/格式化函数读取选中用户名、说明和状态。ApplicationsView.test覆盖本人禁用及两个弹窗的失败提示；e2e/applications.spec.ts包含合成只读列表/409/403界面响应验证与真实新申请审批回归，后端自审409由IdentityIntegrationTest专项验证。
 
 ## 必须保持的规则
 

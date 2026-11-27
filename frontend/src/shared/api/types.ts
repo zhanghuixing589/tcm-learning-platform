@@ -33,5 +33,7 @@ export interface RoleApplication {
   statement: string;
   status: string;
   reviewNote: string | null;
+  reviewerId: string | null;
+  reviewedAt: string | null;
   createdAt: string;
 }

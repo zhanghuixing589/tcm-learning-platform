@@ -22,9 +22,40 @@ class IdentityIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired JdbcTemplate db;
-    private static final String ORIGIN = "http://localhost:5173";
+    @Autowired cn.tcm.platform.identity.infrastructure.SecurityProperties securityProperties;
     private static final String PASSWORD = "TestPass891!";
     record Login(String id, String access, Cookie refresh) {}
+
+    @Test void applicationFiltersUseMatchingCountsAndPreserveOwnershipAndPermissions() throws Exception {
+        Login owner=register();
+        try {
+            for(String state:new String[]{"PENDING","APPROVED","REJECTED","WITHDRAWN"})
+                db.update("INSERT INTO sys_role_applications(user_id,role_id,statement,status) SELECT ?,id,'filter fixture',? FROM sys_roles WHERE code='CONTRIBUTOR'",owner.id(),state);
+            var manager=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("1")
+                    .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("system:user:manage"));
+            for(String filter:new String[]{"ALL","PENDING","PROCESSED"}) {
+                String predicate=filter.equals("ALL")?"1=1":filter.equals("PENDING")?"status='PENDING'":"status IN ('APPROVED','REJECTED','WITHDRAWN')";
+                long expected=db.queryForObject("SELECT COUNT(*) FROM sys_role_applications WHERE "+predicate,Long.class);
+                var result=mvc.perform(get("/api/v1/admin/role-applications").with(manager).param("status",filter).param("pageSize","1"))
+                        .andExpect(status().isOk()).andReturn();
+                JsonNode body=json.readTree(result.getResponse().getContentAsString()).path("data");
+                assertThat(body.path("total").asLong()).isEqualTo(expected);
+                assertThat(body.path("items").size()).isEqualTo(1);
+                String state=body.path("items").get(0).path("status").asText();
+                if(filter.equals("PENDING"))assertThat(state).isEqualTo("PENDING");
+                if(filter.equals("PROCESSED"))assertThat(state).isIn("APPROVED","REJECTED","WITHDRAWN");
+            }
+            mvc.perform(get("/api/v1/admin/role-applications").with(manager).param("status","INVALID")).andExpect(status().isBadRequest());
+            mvc.perform(get("/api/v1/admin/role-applications")).andExpect(status().isUnauthorized());
+            mvc.perform(get("/api/v1/admin/role-applications").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(owner.id())))
+                    .andExpect(status().isForbidden());
+            var own=mvc.perform(get("/api/v1/me/role-applications").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(owner.id())))
+                    .andExpect(status().isOk()).andReturn();
+            JsonNode ownBody=json.readTree(own.getResponse().getContentAsString()).path("data");
+            assertThat(ownBody.path("total").asInt()).isEqualTo(4);
+            for(JsonNode item:ownBody.path("items"))assertThat(item.path("userId").asText()).isEqualTo(owner.id());
+        } finally { db.update("DELETE FROM sys_role_applications WHERE user_id=?",owner.id()); }
+    }
 
     private Login register() throws Exception {
         String name = "test_" + UUID.randomUUID().toString().replace("-", "").substring(0, 15);
@@ -46,7 +77,7 @@ class IdentityIntegrationTest {
         return u;
     }
     private MvcResult refresh(Cookie cookie) throws Exception {
-        return mvc.perform(post("/api/v1/auth/refresh").cookie(cookie).header("Origin",ORIGIN).header("X-CSRF-Token","1"))
+        return mvc.perform(post("/api/v1/auth/refresh").cookie(cookie).header("Origin",securityProperties.allowedOrigins().get(0)).header("X-CSRF-Token","1"))
                 .andReturn();
     }
     @Test void registrationDefaultsToLearnerAndNeverExposesSecrets() throws Exception {
@@ -152,7 +183,7 @@ class IdentityIntegrationTest {
     }
     @Test void logoutRevokesSessionAndClearsCookie() throws Exception {
         Login u=register();
-        mvc.perform(post("/api/v1/auth/logout").cookie(u.refresh()).header("Origin",ORIGIN).header("X-CSRF-Token","1"))
+        mvc.perform(post("/api/v1/auth/logout").cookie(u.refresh()).header("Origin",securityProperties.allowedOrigins().get(0)).header("X-CSRF-Token","1"))
                 .andExpect(status().isOk()).andExpect(cookie().maxAge("tcm_refresh",0));
         assertThat(refresh(u.refresh()).getResponse().getStatus()).isEqualTo(401);
         mvc.perform(get("/api/v1/me").header("Authorization","Bearer "+u.access())).andExpect(status().isUnauthorized());

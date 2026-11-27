@@ -36,6 +36,7 @@ function Get-ChangedTestPlan {
         $path = $raw.Replace('\','/')
         if ($path -match '^contracts/') { $modules += 'all'; $layers += @('backend','frontend','ai'); $reasons += "Contract: $path" }
         elseif ($path -match '^scripts/(Test-Policy|Invoke-TestPlan|test-module|test-changed|check-env)\.ps1$' -or $path -eq 'scripts/tests/workflow.Tests.ps1') { $workflow = $true }
+        elseif ($path -match '^scripts/(dev|Dev-Ports|Import-DevEnvironment)\.ps1$') { $workflow = $true; $modules += 'all'; $layers += @('backend','frontend','ai'); $reasons += "Shared development environment and port wiring: $path" }
         elseif ($path -match '^(AGENTS|MODULE_INDEX|DEVELOPMENT_STATE|DECISIONS|README|PRODUCT|DESIGN|task_plan|findings|progress)\.md$' -or $path -match '^(docs/|\.agents/skills/).+\.md$') { }
         elseif ($path -match '^backend/src/test/') { $modules += 'all'; $layers += 'backend'; $reasons += "Test source changed; include newly added or moved classes: $path" }
         elseif ($path -match '^backend/src/main/java/cn/tcm/platform/([^/]+)/') {

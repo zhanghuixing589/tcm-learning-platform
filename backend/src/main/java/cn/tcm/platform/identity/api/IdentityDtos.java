@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 
 public final class IdentityDtos {
+    public enum ApplicationFilter { ALL, PENDING, PROCESSED }
     private IdentityDtos() {}
 //    注册
     public record Register(@NotBlank @Pattern(regexp="[A-Za-z0-9_]{3,64}") String username,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { api, errorMessage } from "../../shared/api/client";
 import type { Envelope, Page, User } from "../../shared/api/types";
 import { useSessionStore } from "../../shared/stores/session";
@@ -14,6 +14,10 @@ const items = ref<User[]>([]),
 const selected = ref<User | null>(null),
   selectedRoles = ref<string[]>([]),
   dialog = ref(false);
+const selectedUsername=computed(()=>selected.value?.username ?? '');
+const roleError=ref(''),roleErrorElement=ref<HTMLElement|null>(null);
+function isActive(user:User){return user.status==='ACTIVE';}
+function userStatus(user:User){return isActive(user)?'正常':'已禁用';}
 const labels: Record<string, string> = {
   LEARNER: "学习者",
   CONTRIBUTOR: "贡献者",
@@ -53,6 +57,7 @@ async function changeStatus(user: User) {
   }
 }
 function select(user: User) {
+  roleError.value='';
   selected.value = user;
   selectedRoles.value = [...user.roles];
   dialog.value = true;
@@ -61,6 +66,7 @@ async function saveRoles() {
   if (!selected.value) return;
   busy.value = true;
   error.value = "";
+  roleError.value='';
   success.value = "";
   try {
     await api.http.put(`/admin/users/${selected.value.id}/roles`, {
@@ -70,7 +76,9 @@ async function saveRoles() {
     await load();
     success.value = "角色权限已更新";
   } catch (e) {
-    error.value = errorMessage(e);
+    roleError.value=errorMessage(e);await nextTick();
+    roleErrorElement.value?.scrollIntoView?.({block:'nearest'});
+    roleErrorElement.value?.focus({preventScroll:true});
   } finally {
     busy.value = false;
   }
@@ -111,7 +119,7 @@ async function saveRoles() {
       ></el-table-column
     ><el-table-column label="状态" width="90"
       ><template #default="{ row }">{{
-        row.status === "ACTIVE" ? "正常" : "已禁用"
+        userStatus(row as User)
       }}</template></el-table-column
     ><el-table-column label="操作" min-width="200"
       ><template #default="{ row }"
@@ -125,7 +133,7 @@ async function saveRoles() {
             >角色设置</el-button
           ><el-popconfirm
             :title="
-              row.status === 'ACTIVE'
+              isActive(row as User)
                 ? '禁用后该用户的登录会话将立即失效，确认？'
                 : '确认恢复该账号？'
             "
@@ -136,10 +144,10 @@ async function saveRoles() {
             ><template #reference
               ><el-button
                 link
-                :type="row.status === 'ACTIVE' ? 'danger' : 'primary'"
+                :type="isActive(row as User) ? 'danger' : 'primary'"
                 :disabled="busy"
                 >{{
-                  row.status === "ACTIVE" ? "禁用账号" : "恢复账号"
+                  isActive(row as User) ? "禁用账号" : "恢复账号"
                 }}</el-button
               ></template
             ></el-popconfirm
@@ -163,8 +171,9 @@ async function saveRoles() {
     :close-on-click-modal="!busy"
     :close-on-press-escape="!busy"
     :show-close="!busy"
-    ><p>{{ selected?.username }}</p>
+    ><p>{{ selectedUsername }}</p>
     <p class="muted">管理员与专业审核者是独立角色，请按职责分别授权。</p>
+    <p v-if="roleError" ref="roleErrorElement" class="error-message" role="alert" tabindex="-1">{{ roleError }}</p>
     <el-checkbox-group
       v-model="selectedRoles"
       :disabled="busy"

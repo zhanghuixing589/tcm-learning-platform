@@ -19,4 +19,6 @@ sys_audit_logs 保存敏感操作审计；async_jobs / async_job_attempts 保存
 
 `scripts/dev.ps1` 管理三端隐藏进程；`dev_mysql.py` 管理隔离库，数据库停止与应用停止分开。check-env 只检查环境，不启动/停止、不安装依赖、不创建账号。已记录 PID 或 TCP 监听不构成 SQL/业务就绪证明。
 
+端口由`scripts/Dev-Ports.ps1`统一解析，启动/Import-DevEnvironment/check-env共用；主站5177/8084/8004、127.0.0.1回环绑定。worktree须独立runtime/dev-ports.json或完整显式参数；重复/非法端口及占用失败关闭，不自动换号。MinIO宿主机19000/19001。详见工作流“开发端口与多工作区”；Test-Policy对共享启动/环境脚本保留全层回归并增加端口行为自检。
+
 公共后端、配置、迁移及契约变更使用保守全自动回归；公共前端测试涵盖 client/access 并执行类型与构建。AI 健康/解析用 test_health.py / test_documents.py；E2E 按受影响场景选，不默认全跑。

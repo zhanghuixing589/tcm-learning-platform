@@ -12,7 +12,7 @@ export default defineConfig({
     ["json", { outputFile: "../runtime/playwright-results.json" }],
   ],
   use: {
-    baseURL: process.env.E2E_BASE_URL || "http://127.0.0.1:5173",
+    baseURL: process.env.E2E_BASE_URL || "http://127.0.0.1:5177",
     channel: "msedge",
     headless: true,
     screenshot: "only-on-failure",

@@ -28,6 +28,8 @@
 
 第一阶段补充接口：GET /me/role-applications；GET /admin/users；PATCH /admin/users/{id}/status；PUT /admin/users/{id}/roles；GET /admin/role-applications。角色修改要求system:role:manage，其他账户管理要求system:user:manage。用户不能在该接口修改自己的角色或禁用自己；LEARNER基础角色保留。
 
+资格申请列表补充（2026-11-27）：`GET /admin/role-applications?page=1&pageSize=20&status=ALL`新增可选status分组：ALL（默认，兼容旧调用）、PENDING（待处理）、PROCESSED（APPROVED/REJECTED/WITHDRAWN）。未知值400；system:user:manage权限不变。items与total使用同一服务端筛选条件，按id倒序分页。`GET /me/role-applications`仍仅返回本人记录；两端详情复用列表已有ApplicationView，不新增跨用户详情接口。字段含字符串id/userId/reviewerId、username、roleCode、statement、status、reviewNote、reviewedAt、createdAt；reviewerId/reviewNote/reviewedAt允许null，时间为UTC字符串，前端按上海时间展示。筛选不改变审核、自审禁止、状态冲突及授予CONTRIBUTOR规则。
+
 Cookie：tcm_refresh，HttpOnly，SameSite=Strict，Path=/api/v1/auth。refresh/logout必须携带受信任Origin和X-CSRF-Token: 1，自定义头要求浏览器预检，配合精确Origin列表防止跨站调用。生产Cookie默认Secure。登录响应只返回短期accessToken、expiresIn和用户视图，刷新令牌仅通过Set-Cookie返回。重放旧刷新令牌撤销整个登录链，旧JWT随之失效；退出、禁用同样即时撤销。
 
 已实现Java健康：GET /actuator/health/liveness、/actuator/health/readiness，后者包含数据库检查。GET /api/v1/capabilities明确当前问答未实现。AI内部健康：GET /internal/v1/health/liveness、/health/readiness、/capabilities，请求带X-Internal-Token。

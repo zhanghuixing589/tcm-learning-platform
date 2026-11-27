@@ -4,10 +4,15 @@ param(
     [string]$Maven = 'D:\develop\apache-maven-3.9.9\bin\mvn.cmd',
     [string]$Python = (Join-Path $PSScriptRoot '../ai-service/.venv/Scripts/python.exe'),
     [string]$MySqlBin = 'D:\develop\mysql8.0\bin',
-    [int[]]$Ports = @(8080,5173,8000)
+    [int[]]$Ports
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'Dev-Ports.ps1')
+if (!$PSBoundParameters.ContainsKey('Ports')) {
+    $diagnosticPorts=Get-DevPorts -ProjectRoot $root
+    $Ports=@($diagnosticPorts.BackendPort,$diagnosticPorts.FrontendPort,$diagnosticPorts.AiPort)
+}
 $checks = @()
 function Probe([string]$Name,[scriptblock]$Action) {
     try { $detail = & $Action; $script:checks += [pscustomobject]@{ name=$Name; status='ok'; detail=($detail -join ' ') } }
