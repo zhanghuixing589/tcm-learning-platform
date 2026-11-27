@@ -14,7 +14,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def trace(request: Request, call_next):
         candidate = request.headers.get("X-Trace-Id", "")
         request.state.trace_id = candidate if re.fullmatch(r"[A-Za-z0-9_-]{1,64}", candidate) else str(uuid.uuid4())
-        if request.url.path == "/internal/v1/parse":
+        if request.url.path in ("/internal/v1/parse", "/internal/v2/process"):
             supplied = request.headers.get("X-Internal-Token", "")
             if not secrets.compare_digest(supplied, config.internal_token.get_secret_value()):
                 response = JSONResponse(status_code=401, content={"code":"UNAUTHENTICATED","message":"内部凭据无效","data":None,"traceId":request.state.trace_id})
@@ -25,7 +25,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             chunks = []; received = 0
             async for chunk in request.stream():
                 received += len(chunk)
-                if received > 14 * 1024 * 1024:
+                if received > (4096 if request.url.path == '/internal/v2/process' else 14 * 1024 * 1024):
                     response = JSONResponse(status_code=400, content={"code":"DOCUMENT_INVALID","message":"解析请求超过大小限制","data":None,"traceId":request.state.trace_id})
                     response.headers["X-Trace-Id"] = request.state.trace_id
                     response.headers["Cache-Control"] = "no-store"
@@ -61,4 +61,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     from app.document_api import install_documents
     install_documents(application, authorize, result)
+    from app.process_api import install_processing
+    install_processing(application, authorize, config)
     return application

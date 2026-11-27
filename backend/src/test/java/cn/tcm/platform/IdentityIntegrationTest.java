@@ -198,8 +198,8 @@ class IdentityIntegrationTest {
         assertThat(refresh(u.refresh()).getResponse().getStatus()).isEqualTo(401);
     }
     @Test void flywayCreatedCompleteSchemaAndPaginationRejectsOversizedRequests() throws Exception {
-        assertThat(db.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name <> 'flyway_schema_history'",Integer.class)).isEqualTo(84);
-        assertThat(db.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1",Integer.class)).isEqualTo(10);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name <> 'flyway_schema_history'",Integer.class)).isEqualTo(95);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1",Integer.class)).isEqualTo(13);
         Login a=admin();
         mvc.perform(get("/api/v1/admin/users?pageSize=101").header("Authorization","Bearer "+a.access())).andExpect(status().isBadRequest());
     }

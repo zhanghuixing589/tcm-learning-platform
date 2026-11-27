@@ -41,7 +41,8 @@ export const router = createRouter({
         {
           path: "account/posts/:articleId",
           name: "own-post",
-          component: () => import("../modules/community/DiscussionEditorView.vue"),
+          component: () =>
+            import("../modules/community/DiscussionEditorView.vue"),
           meta: { requiresAuth: true, title: "我的讨论" },
         },
         {
@@ -66,17 +67,24 @@ export const router = createRouter({
         },
         {
           path: "community/sections/:sectionId",
-          component: () => import("../modules/community/CommunitySectionView.vue"),
+          component: () =>
+            import("../modules/community/CommunitySectionView.vue"),
           meta: { requiresAuth: true, title: "社区分区" },
         },
         {
           path: "community/posts/new",
-          component: () => import("../modules/community/DiscussionEditorView.vue"),
-          meta: { requiresAuth: true, permission: "community:post", title: "发布讨论" },
+          component: () =>
+            import("../modules/community/DiscussionEditorView.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "community:post",
+            title: "发布讨论",
+          },
         },
         {
           path: "community/posts/:resourceId",
-          component: () => import("../modules/community/CommunityDetailView.vue"),
+          component: () =>
+            import("../modules/community/CommunityDetailView.vue"),
           meta: { requiresAuth: true, title: "社区内容" },
         },
         {
@@ -103,8 +111,48 @@ export const router = createRouter({
         },
         {
           path: "sources/:id",
-          component: () => import("../modules/knowledge/SourceView.vue"),
+          component: () =>
+            import("../modules/knowledge/SourceOverviewView.vue"),
           meta: { requiresAuth: true, title: "来源追溯" },
+        },
+        {
+          path: "sources/:id/read",
+          component: () => import("../modules/knowledge/SourceReaderView.vue"),
+          meta: { requiresAuth: true, title: "来源阅读" },
+        },
+        {
+          path: "knowledge/:id/versions/:revisionId/evidence/:evidenceId",
+          component: () =>
+            import("../modules/knowledge/EvidencePreviewView.vue"),
+          meta: { requiresAuth: true, title: "核对来源引文" },
+        },
+        {
+          path: "contribute/sources/new",
+          component: () => import("../modules/knowledge/SourceWizardView.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "contribution:submit",
+            title: "上传来源资料",
+          },
+        },
+        {
+          path: "contribute/sources/:id/edit",
+          component: () => import("../modules/knowledge/SourceWizardView.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "contribution:submit",
+            title: "编辑来源书目",
+          },
+        },
+        {
+          path: "contribute/proposals/:id",
+          component: () =>
+            import("../modules/knowledge/KnowledgeProposalView.vue"),
+          meta: {
+            requiresAuth: true,
+            permission: "contribution:submit",
+            title: "知识修订建议",
+          },
         },
         {
           path: "contribute",
@@ -113,7 +161,8 @@ export const router = createRouter({
         },
         {
           path: "contribute/sources/:id",
-          component: () => import("../modules/knowledge/SourceView.vue"),
+          component: () =>
+            import("../modules/knowledge/SourceOverviewView.vue"),
           meta: {
             requiresAuth: true,
             permission: "contribution:submit",
@@ -182,7 +231,15 @@ export const router = createRouter({
       component: AdminLayout,
       meta: { requiresAuth: true },
       children: [
-        {path:"knowledge/categories",component:()=>import("../modules/knowledge/KnowledgeTaxonomyAdminView.vue"),meta:{permission:"knowledge:taxonomy:manage",title:"知识目录与标签"}},
+        {
+          path: "knowledge/categories",
+          component: () =>
+            import("../modules/knowledge/KnowledgeTaxonomyAdminView.vue"),
+          meta: {
+            permission: "knowledge:taxonomy:manage",
+            title: "知识目录与标签",
+          },
+        },
         {
           path: "applications",
           component: () => import("../modules/admin/AdminApplicationsView.vue"),
@@ -200,18 +257,24 @@ export const router = createRouter({
         },
         {
           path: "community/sections",
-          component: () => import("../modules/community/CommunitySectionsAdminView.vue"),
+          component: () =>
+            import("../modules/community/CommunitySectionsAdminView.vue"),
           meta: { permission: "community:section:manage", title: "分区管理" },
         },
         {
           path: "community/quotas",
-          component: () => import("../modules/community/CommunityQuotasAdminView.vue"),
+          component: () =>
+            import("../modules/community/CommunityQuotasAdminView.vue"),
           meta: { permission: "community:quota:manage", title: "正文扩容审批" },
         },
         {
           path: "community/policies",
-          component: () => import("../modules/community/CommunityPoliciesAdminView.vue"),
-          meta: { permission: "community:section:manage", title: "社区文本政策" },
+          component: () =>
+            import("../modules/community/CommunityPoliciesAdminView.vue"),
+          meta: {
+            permission: "community:section:manage",
+            title: "社区文本政策",
+          },
         },
       ],
     },
@@ -226,10 +289,14 @@ router.beforeEach(async (to) => {
       : { path: "/login", query: { redirect: to.fullPath } };
   if (to.path === "/admin" || to.path === "/admin/") {
     const permissions = session.user?.permissions ?? [];
-    if (permissions.includes("system:user:manage")) return "/admin/applications";
-    if (permissions.includes("community:section:manage")) return "/admin/community/sections";
-    if (permissions.includes("community:quota:manage")) return "/admin/community/quotas";
-    if (permissions.includes("knowledge:taxonomy:manage")) return "/admin/knowledge/categories";
+    if (permissions.includes("system:user:manage"))
+      return "/admin/applications";
+    if (permissions.includes("community:section:manage"))
+      return "/admin/community/sections";
+    if (permissions.includes("community:quota:manage"))
+      return "/admin/community/quotas";
+    if (permissions.includes("knowledge:taxonomy:manage"))
+      return "/admin/knowledge/categories";
     if (permissions.includes("system:job:manage")) return "/admin/jobs";
     return "/forbidden";
   }

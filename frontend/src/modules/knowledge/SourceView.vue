@@ -161,9 +161,9 @@ function chooseFile(event: Event) {
   if (
     file.value &&
     (file.value.size > 10 * 1024 * 1024 ||
-      !/\.(txt|docx|pdf)$/i.test(file.value.name))
+      !/\.(txt|docx|pdf|epub)$/i.test(file.value.name))
   ) {
-    actionError.value = "请选择不超过 10MB 的 UTF-8 TXT、DOCX 或带文本层 PDF。";
+    actionError.value = "请选择不超过 10MB 的 UTF-8 TXT、DOCX、带文本层 PDF 或未加密文本 EPUB。";
     file.value = null;
     (event.target as HTMLInputElement).value = "";
   }
@@ -332,13 +332,13 @@ onBeforeUnmount(() => {
           >原始资料<input
             aria-label="原始资料"
             type="file"
-            accept=".txt,.docx,.pdf"
+            accept=".txt,.docx,.pdf,.epub"
             :disabled="!!item?.parseRun"
             @change="chooseFile"
           /><small>{{
             fileName
               ? `已关联：${fileName}。${item?.parseRun ? "已有解析记录，更换文件请新建资料。" : "解析前可替换本草稿文件。"}`
-              : "支持 UTF-8 TXT、DOCX 和有文本层的 PDF，单个文件不超过 10MB。不支持扫描件 OCR。"
+              : "支持 UTF-8 TXT、DOCX、有文本层的 PDF 和未加密文本 EPUB，单个文件不超过 10MB。不支持扫描件 OCR。"
           }}</small></label
         ><el-button type="primary" native-type="submit" :loading="busy"
           >保存来源资料</el-button

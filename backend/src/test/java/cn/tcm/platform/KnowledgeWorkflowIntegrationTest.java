@@ -33,7 +33,7 @@ class KnowledgeWorkflowIntegrationTest {
         return json.readTree(mvc.perform(request).andExpect(status().is(status)).andReturn().getResponse().getContentAsString()).path("data");
     }
     private String source(User owner) {
-        db.update("INSERT INTO source_documents(title,source_type,source_url,submitted_by,review_state) VALUES('可靠来源','WEB','https://example.org',?,'APPROVED')",owner.id());
+        db.update("INSERT INTO source_documents(title,source_type,source_url,submitted_by,review_state,rights_status,license_type,copyright_source,authorization_scope,public_reading_allowed,quote_display_allowed) VALUES('可靠来源','WEB','https://example.org',?,'APPROVED','DECLARED','AUTHORIZED','Test author','Citation and reading',1,1)",owner.id());
         return db.queryForObject("SELECT MAX(id) FROM source_documents WHERE submitted_by=?",String.class,owner.id());
     }
     private Map<String,Object> input(String document,String name) {
@@ -57,7 +57,7 @@ class KnowledgeWorkflowIntegrationTest {
         call(other,get("/api/v1/knowledge/"+id),null,404);
         JsonNode review=task(reviewer,revision);approve(reviewer,review);
         approve(reviewer,review); // same actor/decision/note is idempotent even with original lock version
-        assertThat(db.queryForObject("SELECT COUNT(*) FROM async_jobs WHERE revision_id=?",Integer.class,revision)).isEqualTo(2);
+        assertThat(db.queryForObject("SELECT COUNT(*) FROM async_jobs WHERE revision_id=?",Integer.class,revision)).isZero();
         JsonNode published=call(other,get("/api/v1/knowledge/"+id),null,200);
         assertThat(published.path("canonicalName").asText()).isEqualTo(in.get("canonicalName"));
         JsonNode revised=call(author,post("/api/v1/knowledge/"+id+"/revise"),null,200);
@@ -177,7 +177,7 @@ class KnowledgeWorkflowIntegrationTest {
             assertThat(ready.await(15,java.util.concurrent.TimeUnit.SECONDS)).isTrue();start.countDown();
             assertThat(List.of(results.get(0).get(30,java.util.concurrent.TimeUnit.SECONDS),results.get(1).get(30,java.util.concurrent.TimeUnit.SECONDS))).containsExactlyInAnyOrder(200,409);
             assertThat(db.queryForObject("SELECT COUNT(*) FROM review_events WHERE review_task_id=? AND action='APPROVE'",Integer.class,task)).isEqualTo(1);
-            assertThat(db.queryForObject("SELECT COUNT(*) FROM async_jobs WHERE revision_id=?",Integer.class,revision)).isEqualTo(2);
+            assertThat(db.queryForObject("SELECT COUNT(*) FROM async_jobs WHERE revision_id=?",Integer.class,revision)).isZero();
         } finally {pool.shutdownNow();cleanupCommittedFixtures(users);}
     }
     private void cleanupCommittedFixtures(List<User> users) {

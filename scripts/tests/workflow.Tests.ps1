@@ -13,6 +13,7 @@ $plan = Get-ChangedTestPlan @('docs/modules/knowledge.md','README.md','.agents/s
 Assert ($plan.backend.Count -eq 0 -and $plan.frontend.Count -eq 0 -and $plan.ai.Count -eq 0) 'docs do not launch business tests'
 $plan = Get-ChangedTestPlan @('backend/src/main/java/cn/tcm/platform/knowledge/application/KnowledgeService.java')
 Assert ($plan.backend -contains 'PersonalCenterIntegrationTest' -and $plan.backend -contains 'SourceWorkflowIntegrationTest') 'shared-resource consumers expanded'
+Assert ($plan.backend -contains 'SourceReadingIntegrationTest' -and $plan.backend -contains 'KnowledgeProposalIntegrationTest' -and $plan.backend -contains 'SourceProcessingIntegrationTest') 'immutable reading, independent proposals and lease processing stay in shared regression cluster'
 Assert ($plan.frontend -contains 'src/modules/account' -and $plan.ai.Count -gt 0) 'cross-layer consumers included'
   Assert ($plan.backend -contains 'KnowledgeTaxonomyIntegrationTest' -and $plan.backend -contains 'KnowledgeTaxonomyMigrationTest') 'typed taxonomy and compatibility migration stay in the shared regression cluster'
 foreach ($path in @('backend/src/main/java/cn/tcm/platform/common/PublishedKnowledge.java','backend/src/main/java/cn/tcm/platform/identity/infrastructure/SecurityConfiguration.java','backend/src/main/resources/db/migration/V7__example.sql','contracts/README.md','.env.example','deploy/nginx.conf','scripts/dev.ps1','unknown/new.bin','backend/pom.xml')) {

@@ -12,6 +12,9 @@ import static cn.tcm.platform.content.ContentSupport.*;
 public class KnowledgeService {
     private final ContentSupport c;
     private final KnowledgeTaxonomy taxonomy;
+    private final cn.tcm.platform.source.SourceEvidence sourceEvidence;
+    private final cn.tcm.platform.source.SourceRights sourceRights;
+    private final cn.tcm.platform.source.SourceReadingData readingData;
 //    基础常量
 //    知识类型：概念、药材、方剂、功效、症状、经络
     private static final Set<String> TYPES=Set.of("CONCEPT","HERB","FORMULA","EFFECT","SYMPTOM","MERIDIAN");
@@ -24,7 +27,7 @@ public class KnowledgeService {
      *
      * @param c 内容支撑组件
      */
-    public KnowledgeService(ContentSupport c,KnowledgeTaxonomy taxonomy){this.c=c;this.taxonomy=taxonomy;}
+    public KnowledgeService(ContentSupport c,KnowledgeTaxonomy taxonomy,cn.tcm.platform.source.SourceEvidence evidence,cn.tcm.platform.source.SourceRights rights,cn.tcm.platform.source.SourceReadingData readingData){this.c=c;this.taxonomy=taxonomy;sourceEvidence=evidence;sourceRights=rights;this.readingData=readingData;}
     /** 查询知识分类目录。 */
     public List<Map<String,Object>> categories(String type){return taxonomy.directories(type);}
     /** 按资源编号查询知识资源，并根据需要申请数据库行锁。 */
@@ -40,7 +43,7 @@ public class KnowledgeService {
     /** 校验知识类型是否属于系统允许的枚举值。 */
     private static void type(String type){if(!TYPES.contains(type))throw ApiException.invalid("知识类型不正确");}
     /** 综合校验知识稿件的基础信息、来源依据、组成和关联关系。 */
-    private void validate(long actor,KnowledgeInput in,long self){
+    public void validate(long actor,KnowledgeInput in,long self){
         type(in.type());
         text(in.canonicalName(),160,true);//规范名必填≤160
         text(in.title(),255,true);//标题必填≤255
@@ -53,6 +56,7 @@ public class KnowledgeService {
 //       别名大小写归一化去重
         if(!in.type().equals("HERB")&&in.herb()!=null||!in.type().equals("FORMULA")&&(in.formula()!=null||!list(in.ingredients()).isEmpty()))throw ApiException.invalid("结构化属性与知识类型不匹配");
         for(Evidence e:list(in.evidence())){
+            try{sourceEvidence.resolve(actor,e);}catch(ApiException failure){if(failure.status==404&&e.excerptId()==null&&e.readingEditionId()==null)throw ApiException.invalid("来源不存在、不可访问或已停用");throw failure;}
             long doc=id(e.documentId());
             if(c.count("SELECT COUNT(*) FROM source_documents WHERE id=? AND availability='ACTIVE' AND (submitted_by=? OR review_state='APPROVED')",doc,actor)==0)throw ApiException.invalid("来源不存在、不可访问或已停用");
             text(e.quoteText(),20000,true);text(e.locationLabel(),255,false);
@@ -61,7 +65,7 @@ public class KnowledgeService {
                 if(c.count("SELECT COUNT(*) FROM document_segments s JOIN document_parse_runs p ON p.id=s.parse_run_id WHERE s.id=? AND s.document_id=? AND p.status='SUCCEEDED'",id(e.segmentId()),doc)==0)throw ApiException.invalid("片段必须属于所选来源的成功解析批次");
                 String original=c.db.queryForObject("SELECT body FROM document_segments WHERE id=? AND document_id=?",String.class,id(e.segmentId()),doc);
                 if(original==null||!original.contains(e.quoteText().trim()))throw ApiException.invalid("引文必须是所选原文片段中的内容");
-            }else if(e.locationLabel()==null||e.locationLabel().isBlank())throw ApiException.invalid("来源依据需要片段或人工定位");
+            }else if(e.readingEditionId()==null&&e.excerptId()==null&&(e.locationLabel()==null||e.locationLabel().isBlank()))throw ApiException.invalid("来源依据需要片段或人工定位");
         }
         var herbs=new HashSet<Long>();for(Ingredient i:list(in.ingredients())){
             long herb=id(i.herbResourceId());if(!herbs.add(herb)||herb==self)throw ApiException.invalid("药材组成不能重复或指向自己");
@@ -94,7 +98,7 @@ public class KnowledgeService {
     /** 将空白字符串分类编号转换为数据库可接受的空值。 */
     private static Long nullableId(String value){return value==null||value.isBlank()?null:id(value);}
     /** 保存知识版本的规范名、别名、药材或方剂属性、来源依据及结构化关系。 */
-    private void saveChildren(long resource,long revision,KnowledgeInput in){
+    public void saveChildren(long resource,long revision,KnowledgeInput in){
         c.db.update("INSERT INTO knowledge_revision_names(revision_id,knowledge_type,canonical_name) VALUES(?,?,?)",revision,in.type(),in.canonicalName().trim());
         for(String tag:list(in.tagIds()))c.db.update("INSERT INTO revision_tags(revision_id,tag_id) VALUES(?,?)",revision,id(tag));
         for(String alias:list(in.aliases()))c.db.update("INSERT INTO knowledge_revision_aliases(revision_id,alias) VALUES(?,?)",revision,alias.trim());
@@ -109,7 +113,7 @@ public class KnowledgeService {
                     revision,f.originText(),f.functionSummary(),f.indicationSummary(),f.precautions());
         }
         var evidenceIds=new ArrayList<Long>();
-        for(Evidence e:list(in.evidence()))evidenceIds.add(c.insert("INSERT INTO revision_evidence(revision_id,document_id,segment_id,location_label,quote_text) VALUES(?,?,?,?,?)",revision,id(e.documentId()),nullableId(e.segmentId()),e.locationLabel(),e.quoteText()));
+        for(Evidence original:list(in.evidence())){Evidence e=sourceEvidence.resolve(c.db.queryForObject("SELECT created_by FROM content_revisions WHERE id=?",Long.class,revision),original);evidenceIds.add(c.insert("INSERT INTO revision_evidence(revision_id,document_id,segment_id,location_label,quote_text,parse_run_id,reading_edition_id,locator,quote_hash) VALUES(?,?,?,?,?,?,?,?,?)",revision,id(e.documentId()),nullableId(e.segmentId()),e.locationLabel(),e.quoteText(),e.parseRunId()!=null?nullableId(e.parseRunId()):e.segmentId()!=null?c.db.queryForObject("SELECT parse_run_id FROM document_segments WHERE id=?",Long.class,id(e.segmentId())):null,nullableId(e.readingEditionId()),e.locator()==null?null:readingData.encoded(e.locator()),cn.tcm.platform.source.SourceFiles.hash(e.quoteText().getBytes(java.nio.charset.StandardCharsets.UTF_8))));}
         int order=0;
         for(Ingredient i:list(in.ingredients()))c.db.update("INSERT INTO formula_ingredients(formula_resource_id,formula_revision_id,herb_resource_id,herb_revision_id,role,dose_value,dose_unit,dose_text,sort_order,evidence_id) VALUES(?,?,?,?,?,?,?,?,?,?)",resource,revision,id(i.herbResourceId()),id(i.herbRevisionId()),i.role(),i.doseValue(),i.doseUnit(),i.doseText(),order++,evidenceIds.get(i.evidenceIndex()));
         for(Relation r:list(in.relations()))c.db.update("INSERT INTO knowledge_relations(source_resource_id,source_revision_id,target_resource_id,target_revision_id,relation_type,explanation,evidence_id) VALUES(?,?,?,?,?,?,?)",resource,revision,id(r.targetResourceId()),id(r.targetRevisionId()),r.relationType(),r.explanation(),evidenceIds.get(r.evidenceIndex()));
@@ -117,7 +121,7 @@ public class KnowledgeService {
     /** 清除指定修订版本下的别名、来源依据、组成、关系和类型属性子记录。 */
     private void clear(long revision){for(String table:List.of("formula_ingredients","knowledge_relations","herb_profiles","formula_profiles","knowledge_revision_aliases","knowledge_revision_names","revision_evidence")){String col=switch(table){case "formula_ingredients"->"formula_revision_id";case "knowledge_relations"->"source_revision_id";default->"revision_id";};c.db.update("DELETE FROM "+table+" WHERE "+col+"=?",revision);}}
     /** 修改本人已有草稿，并固定知识身份类型且更新资源锁版本。 */
-    @Transactional public Map<String,Object> update(long actor,long resource,KnowledgeInput in){c.require(actor,"contribution:submit");var r=resource(resource,true);owner(actor,r);var v=latest(resource);if(!"DRAFT".equals(v.get("revision_state")))throw ApiException.conflict("仅本人草稿可以修改");String established=c.db.queryForObject("SELECT knowledge_type FROM knowledge_entries WHERE resource_id=?",String.class,resource);if(!Objects.equals(established,in.type()))throw ApiException.invalid("知识身份类型不可变，请新建相应类型的知识");validate(actor,in,resource);long revision=number(v.get("id"));if(in.tagIds()!=null)c.db.update("DELETE FROM revision_tags WHERE revision_id=?",revision);clear(revision);c.db.update("UPDATE content_revisions SET title=?,body=?,category_id=?,change_note=? WHERE id=?",in.title().trim(),in.body(),nullableId(in.categoryId()),in.changeNote(),revision);saveChildren(resource,revision,in);c.db.update("UPDATE content_resources SET lock_version=lock_version+1 WHERE id=?",resource);return detail(revision,false);}
+    @Transactional public Map<String,Object> update(long actor,long resource,KnowledgeInput in){c.require(actor,"contribution:submit");var r=resource(resource,true);owner(actor,r);if(in.expectedVersion()!=null&&number(r.get("lock_version"))!=in.expectedVersion())throw ApiException.conflict("Knowledge draft version changed");var v=latest(resource);if(!"DRAFT".equals(v.get("revision_state")))throw ApiException.conflict("仅本人草稿可以修改");String established=c.db.queryForObject("SELECT knowledge_type FROM knowledge_entries WHERE resource_id=?",String.class,resource);if(!Objects.equals(established,in.type()))throw ApiException.invalid("知识身份类型不可变，请新建相应类型的知识");validate(actor,in,resource);long revision=number(v.get("id"));if(in.tagIds()!=null)c.db.update("DELETE FROM revision_tags WHERE revision_id=?",revision);clear(revision);c.db.update("UPDATE content_revisions SET title=?,body=?,category_id=?,change_note=? WHERE id=?",in.title().trim(),in.body(),nullableId(in.categoryId()),in.changeNote(),revision);saveChildren(resource,revision,in);c.db.update("UPDATE content_resources SET lock_version=lock_version+1 WHERE id=?",resource);return detail(revision,false);}
     /** 查询本人或审核人员可查看的知识草稿版本详情。 */
     public Map<String,Object> draft(long actor,long resource){var r=resource(resource,false);readable(actor,r);return detail(number(latest(resource).get("id")),false);}
 //    修订方法--版本分支复制
@@ -136,7 +140,7 @@ public class KnowledgeService {
         c.db.update("INSERT INTO herb_profiles(revision_id,nature,flavor,origin_note,precautions) SELECT ?,nature,flavor,origin_note,precautions FROM herb_profiles WHERE revision_id=?",to,from);
         c.db.update("INSERT INTO formula_profiles(revision_id,origin_text,function_summary,indication_summary,precautions) SELECT ?,origin_text,function_summary,indication_summary,precautions FROM formula_profiles WHERE revision_id=?",to,from);
         var evidence=new HashMap<Long,Long>();
-        for(var e:c.db.queryForList("SELECT * FROM revision_evidence WHERE revision_id=? ORDER BY id",from))evidence.put(number(e.get("id")),c.insert("INSERT INTO revision_evidence(revision_id,document_id,segment_id,location_label,quote_text) VALUES(?,?,?,?,?)",to,e.get("document_id"),e.get("segment_id"),e.get("location_label"),e.get("quote_text")));
+        for(var e:c.db.queryForList("SELECT * FROM revision_evidence WHERE revision_id=? ORDER BY id",from))evidence.put(number(e.get("id")),c.insert("INSERT INTO revision_evidence(revision_id,document_id,segment_id,location_label,quote_text,parse_run_id,reading_edition_id,locator,quote_hash) VALUES(?,?,?,?,?,?,?,?,?)",to,e.get("document_id"),e.get("segment_id"),e.get("location_label"),e.get("quote_text"),e.get("parse_run_id"),e.get("reading_edition_id"),e.get("locator"),e.get("quote_hash")));
         for(var i:c.db.queryForList("SELECT * FROM formula_ingredients WHERE formula_revision_id=?",from))c.db.update("INSERT INTO formula_ingredients(formula_resource_id,formula_revision_id,herb_resource_id,herb_revision_id,role,dose_value,dose_unit,dose_text,sort_order,evidence_id) VALUES(?,?,?,?,?,?,?,?,?,?)",resource,to,i.get("herb_resource_id"),i.get("herb_revision_id"),i.get("role"),i.get("dose_value"),i.get("dose_unit"),i.get("dose_text"),i.get("sort_order"),evidence.get(number(i.get("evidence_id"))));
         for(var rel:c.db.queryForList("SELECT * FROM knowledge_relations WHERE source_revision_id=?",from))c.db.update("INSERT INTO knowledge_relations(source_resource_id,source_revision_id,target_resource_id,target_revision_id,relation_type,explanation,evidence_id) VALUES(?,?,?,?,?,?,?)",resource,to,rel.get("target_resource_id"),rel.get("target_revision_id"),rel.get("relation_type"),rel.get("explanation"),evidence.get(number(rel.get("evidence_id"))));
         c.audit(actor,"KNOWLEDGE_REVISE","REVISION",to);
@@ -164,10 +168,12 @@ public class KnowledgeService {
             taxonomy.requireTags(c.db.queryForList("SELECT tag_id FROM revision_tags WHERE revision_id=? ORDER BY tag_id",String.class,revision),true);
         } catch(ApiException e) { throw ApiException.conflict("目录或标签已失效，请退回修订后重新选择"); }
         if(c.count("SELECT COUNT(*) FROM revision_evidence WHERE revision_id=?",revision)==0)throw ApiException.conflict("提交需要至少一条来源依据");
+        for(var e:c.db.queryForList("SELECT * FROM revision_evidence WHERE revision_id=?",revision))sourceEvidence.publication(e);
         for(var d:c.db.queryForList("SELECT d.id,d.review_state,d.availability FROM source_documents d JOIN revision_evidence e ON e.document_id=d.id WHERE e.revision_id=? ORDER BY d.id FOR UPDATE",revision))if(!"APPROVED".equals(d.get("review_state"))||!"ACTIVE".equals(d.get("availability")))throw ApiException.conflict("来源必须审核通过且有效");
         for(var i:c.db.queryForList("SELECT herb_resource_id,herb_revision_id FROM formula_ingredients WHERE formula_revision_id=? FOR UPDATE",revision))readyTarget(number(i.get("herb_resource_id")),number(i.get("herb_revision_id")),"HERB");
         for(var rel:c.db.queryForList("SELECT target_resource_id,target_revision_id FROM knowledge_relations WHERE source_revision_id=? FOR UPDATE",revision))readyTarget(number(rel.get("target_resource_id")),number(rel.get("target_revision_id")),null);
     }
+    public boolean indexable(long revision){return c.count("SELECT COUNT(*) FROM revision_evidence WHERE revision_id=?",revision)>0&&c.count("SELECT COUNT(*) FROM revision_evidence e JOIN source_documents d ON d.id=e.document_id LEFT JOIN source_reading_editions re ON re.id=e.reading_edition_id WHERE e.revision_id=? AND (d.rights_status<>'DECLARED' OR d.rag_use_allowed=0 OR d.quote_display_allowed=0 OR d.approved_use<>'TEXT_CITABLE' OR e.parse_run_id IS NULL OR e.reading_edition_id IS NULL OR COALESCE(JSON_UNQUOTE(JSON_EXTRACT(re.capabilities,'$.preciseCitationSupported')),'false')<>'true')",revision)==0;}
     /** 校验结构化关联目标已发布、已审核、用户有效且来源依据仍有效。 */
     private void readyTarget(long resource,long revision,String type){
         var rows=c.db.queryForList("SELECT r.visibility_status,v.revision_state,u.status,n.knowledge_type FROM content_resources r JOIN content_revisions v ON v.resource_id=r.id JOIN sys_users u ON u.id=r.owner_id JOIN knowledge_revision_names n ON n.revision_id=v.id WHERE r.id=? AND v.id=? FOR UPDATE",resource,revision);
@@ -212,7 +218,7 @@ public class KnowledgeService {
         out.put("tags",c.db.queryForList("SELECT t.id,t.name,t.active FROM revision_tags rt JOIN content_tags t ON t.id=rt.tag_id WHERE rt.revision_id=? ORDER BY t.name,t.id",revision).stream().map(t->map("id",sid(t.get("id")),"name",t.get("name"),"active",number(t.get("active"))==1)).toList());
         out.put("aliases",c.db.query("SELECT alias FROM knowledge_revision_aliases WHERE revision_id=? ORDER BY alias",(r,n)->r.getString(1),revision));
         out.put("herb",profile("herb_profiles",revision));out.put("formula",profile("formula_profiles",revision));
-        var evidence=new ArrayList<Map<String,Object>>();var indices=new HashMap<Long,Integer>();for(var e:c.db.queryForList("SELECT e.*,d.title AS document_title FROM revision_evidence e JOIN source_documents d ON d.id=e.document_id WHERE e.revision_id=?"+(publicView?" AND d.review_state='APPROVED' AND d.availability='ACTIVE'":"")+" ORDER BY e.id",revision)){indices.put(number(e.get("id")),evidence.size());evidence.add(map("id",sid(e.get("id")),"documentId",sid(e.get("document_id")),"segmentId",sid(e.get("segment_id")),"locationLabel",e.get("location_label"),"quoteText",e.get("quote_text"),"documentTitle",e.get("document_title")));}out.put("evidence",evidence);
+        var evidence=new ArrayList<Map<String,Object>>();var indices=new HashMap<Long,Integer>();for(var e:c.db.queryForList("SELECT e.*,d.title AS document_title FROM revision_evidence e JOIN source_documents d ON d.id=e.document_id WHERE e.revision_id=?"+(publicView?" AND d.review_state='APPROVED' AND d.availability='ACTIVE'":"")+" ORDER BY e.id",revision)){indices.put(number(e.get("id")),evidence.size());evidence.add(map("id",sid(e.get("id")),"documentId",sid(e.get("document_id")),"segmentId",sid(e.get("segment_id")),"locationLabel",e.get("location_label"),"quoteText",e.get("quote_text"),"documentTitle",e.get("document_title"),"parseRunId",sid(e.get("parse_run_id")),"readingEditionId",sid(e.get("reading_edition_id")),"locator",readingData.decoded(e.get("locator"),null),"quoteHash",e.get("quote_hash")));}out.put("evidence",evidence);
         var ingredients=new ArrayList<Map<String,Object>>();for(var i:c.db.queryForList("SELECT i.*,n.canonical_name FROM formula_ingredients i JOIN knowledge_revision_names n ON n.revision_id=i.herb_revision_id WHERE i.formula_revision_id=? ORDER BY i.sort_order,i.id",revision)){if(publicView&&!isVisible(number(i.get("herb_resource_id")),number(i.get("herb_revision_id"))))continue;ingredients.add(map("id",sid(i.get("id")),"herbResourceId",sid(i.get("herb_resource_id")),"herbRevisionId",sid(i.get("herb_revision_id")),"herbName",i.get("canonical_name"),"role",i.get("role"),"doseValue",i.get("dose_value"),"doseUnit",i.get("dose_unit"),"doseText",i.get("dose_text"),"evidenceIndex",indices.get(number(i.get("evidence_id")))));}out.put("ingredients",ingredients);
         var relations=new ArrayList<Map<String,Object>>();for(var rel:c.db.queryForList("SELECT i.*,n.canonical_name FROM knowledge_relations i JOIN knowledge_revision_names n ON n.revision_id=i.target_revision_id WHERE i.source_revision_id=? ORDER BY i.id",revision)){if(publicView&&!isVisible(number(rel.get("target_resource_id")),number(rel.get("target_revision_id"))))continue;relations.add(map("id",sid(rel.get("id")),"targetResourceId",sid(rel.get("target_resource_id")),"targetRevisionId",sid(rel.get("target_revision_id")),"targetName",rel.get("canonical_name"),"relationType",rel.get("relation_type"),"explanation",rel.get("explanation"),"evidenceIndex",indices.get(number(rel.get("evidence_id")))));}out.put("relations",relations);
         var notes=c.db.queryForList("SELECT review_note FROM review_tasks WHERE revision_id=?",revision);out.put("reviewNote",notes.isEmpty()?null:notes.get(0).get("review_note"));return out;
@@ -223,7 +229,7 @@ public class KnowledgeService {
     @Transactional public Map<String,Object> imports(long actor,ImportInput input){c.require(actor,"contribution:submit");if(input.items()==null||input.items().isEmpty()||input.items().size()>50)throw ApiException.invalid("每次导入1至50项");for(var in:input.items())validate(actor,in,0);return map("items",input.items().stream().map(in->createValidated(actor,in)).toList());}
     /** 从指定文档的成功解析片段中提取草稿，生成待人工校正的知识条目。 */
     @Transactional public Map<String,Object> extract(long actor,ExtractionInput input){
-        c.require(actor,"contribution:submit");type(input.type());long document=id(input.documentId());if(c.count("SELECT COUNT(*) FROM source_documents WHERE id=? AND availability='ACTIVE' AND (submitted_by=? OR review_state='APPROVED')",document,actor)==0)throw ApiException.missing();
+        c.require(actor,"contribution:submit");type(input.type());long document=id(input.documentId());sourceRights.requireRead(actor,document);if(c.count("SELECT COUNT(*) FROM source_documents WHERE id=? AND availability='ACTIVE' AND (submitted_by=? OR review_state='APPROVED')",document,actor)==0)throw ApiException.missing();
         if(input.segmentIds()==null||input.segmentIds().isEmpty()||input.segmentIds().size()>50||new HashSet<>(input.segmentIds()).size()!=input.segmentIds().size())throw ApiException.invalid("选择1至50个不同片段");
         var inputs=new ArrayList<KnowledgeInput>();for(String segment:input.segmentIds()){var s=c.row("SELECT s.* FROM document_segments s JOIN document_parse_runs p ON p.id=s.parse_run_id AND p.status='SUCCEEDED' WHERE s.id=? AND s.document_id=?",id(segment),document);String body=text(sid(s.get("body")),20000,true);String title="待校正："+body.substring(0,Math.min(60,body.length()));inputs.add(new KnowledgeInput(input.type(),title,title,body,null,"从来源片段整理，待人工校正",List.of(),null,null,List.of(new Evidence(""+document,segment,sid(s.get("page_label")),body)),List.of(),List.of(),List.of()));}
         for(var in:inputs)validate(actor,in,0);return map("items",inputs.stream().map(in->createValidated(actor,in)).toList());

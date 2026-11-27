@@ -329,9 +329,10 @@ class PersonalCenterIntegrationTest {
         User u=user();
         call(as(u,multipart("/api/v1/me/avatar")),400);
     }
+    @Autowired cn.tcm.platform.source.SourceLimits sourceLimits;
     @Test void transportLimitAllowsDocumentsWhileAvatarHasItsOwnLimit() {
         // Documents have a larger transport limit; AvatarService independently enforces its 2MB limit.
-        assertThat(multipartProperties.getMaxFileSize().toBytes()).isEqualTo(10*1024*1024);
+        assertThat(multipartProperties.getMaxFileSize().toBytes()).isEqualTo(sourceLimits.maxOriginalBytes());
     }
     @Test @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void oversizedAvatarIsControlledOverRealHttp() throws Exception {

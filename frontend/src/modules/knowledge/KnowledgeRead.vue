@@ -74,7 +74,7 @@ defineProps<{ item: KnowledgeDetail; showTitle?: boolean; anchorPrefix?: string;
     </section>
     <section :id="anchorPrefix && `${anchorPrefix}-evidence`">
       <h2>来源依据</h2>
-      <KnowledgeEvidence :evidence="item.evidence || []" :version-no="item.versionNo" :anchor-prefix="anchorPrefix"/>
+      <KnowledgeEvidence :evidence="item.evidence || []" :resource-id="item.id" :revision-id="item.revisionId" :version-no="item.versionNo" :anchor-prefix="anchorPrefix"/>
     </section>
     <section v-if="item.relations?.length" :id="anchorPrefix && `${anchorPrefix}-relations`">
       <h2>相关知识</h2>

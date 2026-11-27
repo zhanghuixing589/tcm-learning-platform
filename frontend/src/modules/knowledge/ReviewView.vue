@@ -7,6 +7,9 @@ import { useWorkspace } from "./useWorkspace";
 import WorkspaceState from "./WorkspaceState.vue";
 import KnowledgeRead from "./KnowledgeRead.vue";
 import SourceRead from "./SourceRead.vue";
+import KnowledgeDraftForm from "./KnowledgeDraftForm.vue";
+import SourceProcessingSummary from "./SourceProcessingSummary.vue";
+import { warningText } from "./readerModes";
 import VersionCompare from "./VersionCompare.vue";
 import CommunityMarkdown from "../community/CommunityMarkdown.vue";
 import CommunityReferences from "../community/CommunityReferences.vue";
@@ -20,6 +23,9 @@ const item = ref<ReviewDetail | null>(null),
   articlePolicy = ref<TextPolicy | null>(null),
   segments = ref<Segment[]>([]),
   note = ref(""),
+  acknowledgedWarnings = ref<string[]>([]),
+  approvedUse = ref<"REFERENCE_ONLY" | "TEXT_CITABLE">("REFERENCE_ONLY"),
+  approvedUnits = ref<string[]>([]),
   decision = ref<"APPROVED" | "REJECTED">("APPROVED");
 const self = computed(
   () => !!item.value && item.value.submittedBy === session.user?.id,
@@ -33,6 +39,9 @@ const mine = computed(() => item.value?.reviewerId === session.user?.id);
 function refresh() {
   item.value = null;
   note.value = "";
+  acknowledgedWarnings.value = [];
+  approvedUse.value = "REFERENCE_ONLY";
+  approvedUnits.value = [];
   segments.value = [];
   articlePolicy.value = null;
   load(
@@ -75,16 +84,56 @@ function submit() {
     document.getElementById("review-note")?.focus();
     return;
   }
+  const processing = item.value.document?.processingSummary;
+  if (
+    item.value.kind === "SOURCE" &&
+    decision.value === "APPROVED" &&
+    processing
+  ) {
+    if (
+      processing.warnings.some(
+        (w) =>
+          !acknowledgedWarnings.value.includes(
+            typeof w === "string" ? w : w.code,
+          ),
+      )
+    ) {
+      actionError.value = "请逐项核对并确认处理警告后再批准";
+      return;
+    }
+    if (approvedUse.value === "TEXT_CITABLE" && !approvedUnits.value.length) {
+      actionError.value = "请选择本次批准的可靠文字单元";
+      return;
+    }
+  }
   const id = item.value.id,
     version = item.value.lockVersion;
   act(
     async () => {
-      const result = await stageApi.decide(
-        id,
-        version,
-        decision.value,
-        note.value.trim(),
-      );
+      const sourceDecision =
+        item.value?.kind === "SOURCE" && item.value.document?.processingSummary
+          ? {
+              acknowledgedWarnings: acknowledgedWarnings.value,
+              approvedUse: approvedUse.value,
+              approvedCoverage: {
+                unitIds:
+                  approvedUse.value === "TEXT_CITABLE"
+                    ? approvedUnits.value
+                    : [],
+              },
+              coverageSnapshotHash:
+                item.value.document.processingSummary.coverageSnapshotHash,
+            }
+          : undefined;
+      const result = sourceDecision
+        ? await stageApi.decide(
+            id,
+            version,
+            decision.value,
+            note.value.trim(),
+            sourceDecision,
+          )
+        : await stageApi.decide(id, version, decision.value, note.value.trim());
       return result;
     },
     (value) => {
@@ -114,7 +163,9 @@ watch(() => route.params.id, refresh, { immediate: true });
                 ? "来源审核"
                 : item.kind === "ARTICLE"
                   ? "文章审核"
-                  : "知识审核"
+                  : item.kind === "KNOWLEDGE_PROPOSAL"
+                    ? "知识修订建议审核"
+                    : "知识审核"
             }}</span>
             <h1>{{ item.title }}</h1>
             <p>
@@ -129,7 +180,10 @@ watch(() => route.params.id, refresh, { immediate: true });
         </p>
         <section v-if="item.document" class="stage-section">
           <h2>待审核来源</h2>
-          <SourceRead :item="item.document" />
+          <SourceRead :item="item.document" /><SourceProcessingSummary
+            v-if="item.document.processingSummary"
+            :summary="item.document.processingSummary"
+          />
           <p v-if="item.document.parseRun" class="stage-hint">
             解析：{{
               stateLabels[item.document.parseRun.status] ||
@@ -150,6 +204,25 @@ watch(() => route.params.id, refresh, { immediate: true });
             >查看完整来源与全部片段</RouterLink
           >
         </section>
+        <section
+          v-if="item.kind === 'KNOWLEDGE_PROPOSAL' && item.proposal"
+          class="stage-section"
+        >
+          <h2>独立修订建议</h2>
+          <p>
+            提案 {{ item.proposal.id }} · 基准正式版本
+            {{
+              item.proposal.baseRevisionId
+            }}。以下为提案载荷，通过审核后才生成正式版本。
+          </p>
+          <KnowledgeDraftForm
+            v-model="item.proposal.knowledge"
+            :categories="[]"
+            :tags="[]"
+            :editable="false"
+            :is-new="false"
+          />
+        </section>
         <section v-if="item.knowledge" class="stage-section">
           <h2>待审核知识</h2>
           <KnowledgeRead :item="item.knowledge" /><VersionCompare
@@ -159,10 +232,19 @@ watch(() => route.params.id, refresh, { immediate: true });
         <section v-if="item.article" class="stage-section">
           <h2>待审核文章</h2>
           <h3>{{ item.article.title }}</h3>
-          <p v-if="item.article.section" class="muted">投稿分区 {{ item.article.section.name }}</p>
-          <CommunityMarkdown :body="item.article.body" :source-format="item.article.sourceFormat"
-            :references="item.article.references" :policy="articlePolicy" />
-          <CommunityReferences :references="item.article.references || []" :policy="articlePolicy" />
+          <p v-if="item.article.section" class="muted">
+            投稿分区 {{ item.article.section.name }}
+          </p>
+          <CommunityMarkdown
+            :body="item.article.body"
+            :source-format="item.article.sourceFormat"
+            :references="item.article.references"
+            :policy="articlePolicy"
+          />
+          <CommunityReferences
+            :references="item.article.references || []"
+            :policy="articlePolicy"
+          />
         </section>
         <section class="stage-section">
           <h2>审核处理</h2>
@@ -185,6 +267,60 @@ watch(() => route.params.id, refresh, { immediate: true });
               >
             </div>
             <form v-else @submit.prevent="submit">
+              <fieldset
+                v-if="
+                  item.kind === 'SOURCE' && item.document?.processingSummary
+                "
+              >
+                <legend>来源处理覆盖与批准用途</legend>
+                <p>
+                  处理结果：{{ item.document.processingSummary.overallOutcome }}
+                </p>
+                <label
+                  v-for="(warning, index) in item.document.processingSummary
+                    .warnings"
+                  :key="index"
+                  class="stage-field"
+                  ><span
+                    ><input
+                      v-model="acknowledgedWarnings"
+                      type="checkbox"
+                      :value="
+                        typeof warning === 'string' ? warning : warning.code
+                      "
+                    />已核对并接受：{{ warningText(warning) }}</span
+                  ></label
+                ><label class="stage-field"
+                  >批准用途<select v-model="approvedUse">
+                    <option value="REFERENCE_ONLY">
+                      仅供阅读参考（不批准精确文字引用）
+                    </option>
+                    <option value="TEXT_CITABLE">允许可靠文字引用</option>
+                  </select></label
+                >
+                <fieldset v-if="approvedUse === 'TEXT_CITABLE'">
+                  <legend>批准的可靠文字单元</legend>
+                  <label
+                    v-for="unit in item.document.processingSummary.units"
+                    :key="unit.id"
+                    class="stage-field"
+                    ><span
+                      ><input
+                        v-model="approvedUnits"
+                        type="checkbox"
+                        :value="unit.id"
+                        :disabled="!unit.textReliable"
+                      />{{ unit.unitNo }} · {{ unit.title }}
+                      {{
+                        unit.textReliable ? "" : "（无可靠文字，不可批准）"
+                      }}</span
+                    ></label
+                  >
+                </fieldset>
+                <p>
+                  本次批准仅覆盖勾选的内容；处理结果变化后需刷新并重新核对。
+                </p>
+              </fieldset>
               <p class="stage-hint">
                 审核意见必须说明核对依据。任务状态变化或锁版本冲突时，请刷新后重新核对。
               </p>

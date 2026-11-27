@@ -1,0 +1,56 @@
+name: tcm-learning-platform
+
+services:
+  converter:
+    profiles: ["converter"]
+    image: tcm-source-converter:local
+    build:
+      context: ./converter
+    user: "10001:10001"
+    network_mode: none
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 96
+    mem_limit: 768m
+    memswap_limit: 768m
+    cpus: 1.0
+    init: true
+    restart: "no"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001,mode=1777
+      - /work:rw,nosuid,size=384m,uid=10001,gid=10001,mode=700
+      - /output:rw,noexec,nosuid,size=200m,uid=10001,gid=10001,mode=700
+    environment:
+      HOME: /tmp/home
+      TMPDIR: /work
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      ALL_PROXY: ""
+      NO_PROXY: ""
+      http_proxy: ""
+      https_proxy: ""
+      all_proxy: ""
+      no_proxy: ""
+  minio:
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    command: ["server", "/data", "--console-address", ":9001"]
+    init: true
+    restart: unless-stopped
+    env_file:
+      - ../runtime/minio.env
+    ports:
+      - "127.0.0.1:19000:9000"
+      - "127.0.0.1:19001:9001"
+    volumes:
+      - minio-data:/data
+      - ./minio:/bootstrap:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+volumes:
+  minio-data:

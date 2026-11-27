@@ -7,6 +7,8 @@ import {
   type Segment,
   type SourceDocument,
 } from "./api";
+import ExcerptLibrary from "./ExcerptLibrary.vue";
+import { evidenceReaderLink } from "./readerSelection";
 const props = defineProps<{ modelValue: Evidence[]; disabled?: boolean }>();
 const emit = defineEmits<{
   "update:modelValue": [value: Evidence[]];
@@ -128,9 +130,10 @@ onMounted(() => search());
     <ol class="stage-evidence">
       <li v-for="(item, index) in modelValue" :key="index">
         <div class="stage-row-header">
-          <RouterLink :to="`/sources/${item.documentId}`">{{
+          <RouterLink :to="evidenceReaderLink(item)">{{
             item.documentTitle || `来源 ${item.documentId}`
-          }}</RouterLink><el-button
+          }}</RouterLink
+          ><el-button
             v-if="!disabled"
             @click="$emit('remove', index)"
             :aria-label="`移除依据 ${index + 1}`"
@@ -144,6 +147,18 @@ onMounted(() => search());
     <p v-if="!modelValue.length" class="stage-hint">
       尚未添加依据。请先在下方选择来源。
     </p>
+    <ExcerptLibrary
+      v-if="!disabled"
+      @add="
+        (excerpt) => {
+          if (!modelValue.some((e) => e.excerptId === excerpt.id))
+            emit('update:modelValue', [
+              ...modelValue,
+              { ...excerpt, id: undefined, excerptId: excerpt.id },
+            ]);
+        }
+      "
+    />
     <div v-if="!disabled" class="stage-section">
       <div class="stage-actions">
         <label class="stage-field" style="flex: 1"

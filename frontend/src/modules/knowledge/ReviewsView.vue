@@ -73,8 +73,14 @@ watch(() => route.fullPath, refresh, { immediate: true });
                 ? "来源"
                 : item.kind === "ARTICLE"
                   ? "文章"
-                  : "知识"
-            }}</span><StatusBadge :state="item.status" :label="stateLabels[item.status] || item.status" />
+                  : item.kind === "KNOWLEDGE_PROPOSAL"
+                    ? "知识修订建议"
+                    : "知识"
+            }}</span
+            ><StatusBadge
+              :state="item.status"
+              :label="stateLabels[item.status] || item.status"
+            />
             <span>{{ item.submitterName }}</span
             ><span v-if="item.reviewerId">已领取</span>
           </div>

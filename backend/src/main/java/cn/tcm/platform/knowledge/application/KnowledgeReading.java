@@ -1,0 +1,27 @@
+package cn.tcm.platform.knowledge.application;
+
+import cn.tcm.platform.common.*;
+import cn.tcm.platform.content.ContentSupport;
+import cn.tcm.platform.knowledge.api.KnowledgeDtos.*;
+import cn.tcm.platform.source.*;
+import com.fasterxml.jackson.databind.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.*;
+import static cn.tcm.platform.content.ContentSupport.*;
+
+@Service
+public class KnowledgeReading {
+    private final ContentSupport c;private final KnowledgeService knowledge;private final SourceReader reader;private final SourceRights rights;private final SourceService sources;private final SourceReadingData data;private final ObjectMapper json;
+    public KnowledgeReading(ContentSupport c,KnowledgeService k,SourceReader r,SourceRights rights,SourceService s,SourceReadingData d,ObjectMapper j){this.c=c;knowledge=k;reader=r;this.rights=rights;sources=s;data=d;json=j;}
+    public List<Map<String,Object>> matches(long actor,String q,String type){text(q,100,true);var byId=new LinkedHashMap<String,Map<String,Object>>();for(boolean own:List.of(false,true))for(var item:knowledge.search(actor,own,1,10,q,type,null,null).items())byId.put(item.get("id").toString(),map("id",item.get("id"),"title",item.get("title"),"canonicalName",item.get("canonicalName"),"type",item.get("type"),"ownerId",item.get("ownerId"),"revisionId",item.get("revisionId"),"revisionState",item.get("revisionState")));return new ArrayList<>(byId.values());}
+    private List<Map<String,Object>> fields(Object rows,String...keys){var out=new ArrayList<Map<String,Object>>();for(var n:json.valueToTree(rows)){var row=new LinkedHashMap<String,Object>();for(String key:keys)if(n.has(key))row.put(key,json.convertValue(n.get(key),Object.class));out.add(row);}return out;}
+    public KnowledgeInput input(Map<String,Object> detail,Integer expected){var fields=new LinkedHashMap<String,Object>();for(String key:List.of("type","canonicalName","title","body","categoryId","changeNote","aliases","herb","formula"))fields.put(key,detail.get(key));
+        fields.put("evidence",fields(detail.get("evidence"),"documentId","segmentId","locationLabel","quoteText","excerptId","parseRunId","readingEditionId","locator","quoteHash"));
+        fields.put("ingredients",fields(detail.get("ingredients"),"herbResourceId","herbRevisionId","role","doseValue","doseUnit","doseText","evidenceIndex"));fields.put("relations",fields(detail.get("relations"),"targetResourceId","targetRevisionId","relationType","explanation","evidenceIndex"));
+        var tags=new ArrayList<String>();for(var t:json.valueToTree(detail.get("tags")))tags.add(t.path("id").asText());fields.put("tagIds",tags);fields.put("expectedVersion",expected);return json.convertValue(fields,KnowledgeInput.class);}
+    @Transactional public Map<String,Object> append(long actor,long resource,JsonNode request){c.require(actor,"contribution:submit");var r=c.row("SELECT * FROM content_resources WHERE id=? AND resource_type='KNOWLEDGE' FOR UPDATE",resource);if(number(r.get("owner_id"))!=actor)throw ApiException.missing();if(!request.hasNonNull("expectedVersion")||number(r.get("lock_version"))!=request.path("expectedVersion").asInt(-1))throw ApiException.conflict("草稿已更新，请保留内容并重新读取");var draft=knowledge.draft(actor,resource);if(!"DRAFT".equals(draft.get("revisionState")))throw ApiException.conflict("只可向本人草稿添加引用");
+        var existing=new ArrayList<Map<String,Object>>();for(var e:json.valueToTree(draft.get("evidence")))existing.add(json.convertValue(e,new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){}));var seen=new HashSet<String>();for(var e:existing)seen.add(e.get("documentId")+":"+e.get("quoteHash")+":"+e.get("locator"));var ids=request.path("excerptIds");if(!ids.isArray()||ids.isEmpty()||ids.size()>100)throw ApiException.invalid("请选择1至100条摘录");for(var id:ids){var x=reader.ownedExcerpt(actor,cn.tcm.platform.content.ContentSupport.id(id.asText()));String key=x.get("documentId")+":"+x.get("quoteHash")+":"+x.get("locator");if(seen.add(key))existing.add(x);}draft.put("evidence",existing);return knowledge.update(actor,resource,input(draft,request.path("expectedVersion").asInt()));}
+    public Map<String,Object> preview(long actor,long resource,long revision,long evidence){knowledge.version(actor,resource,revision);var e=c.row("SELECT e.*,d.title AS document_title FROM revision_evidence e JOIN source_documents d ON d.id=e.document_id WHERE e.id=? AND e.revision_id=?",evidence,revision);var d=c.row("SELECT * FROM source_documents WHERE id=?",e.get("document_id"));boolean privilege=rights.privileged(actor,d);if(!"ACTIVE".equals(d.get("availability"))||!privilege&&!SourceRights.flag(d.get("quote_display_allowed"))&&!"LEGACY_UNCONFIRMED".equals(d.get("rights_status")))throw ApiException.missing();
+        boolean can=rights.canRead(actor,d)&&e.get("reading_edition_id")!=null;var quote=map("id",sid(e.get("id")),"documentId",sid(e.get("document_id")),"documentTitle",e.get("document_title"),"segmentId",sid(e.get("segment_id")),"locationLabel",e.get("location_label"),"quoteText",e.get("quote_text"),"quoteHash",e.get("quote_hash"),"parseRunId",sid(e.get("parse_run_id")),"readingEditionId",sid(e.get("reading_edition_id")),"locator",data.decoded(e.get("locator"),null));return map("document",sources.view(d),"evidence",quote,"restricted",!can,"canOpenReader",can,"reason",can?null:e.get("reading_edition_id")==null?"历史片段引文与解析批次已保留；尚未绑定固定阅读版本，请按原文摘录与位置说明核对":"此来源仅授权展示已审核引文，暂不开放整书阅读");}
+}

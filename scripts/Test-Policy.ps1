@@ -13,7 +13,7 @@ function New-TestPlan {
     $backend = @(); $front = @(); $ai = @()
     if ('backend' -in $Layers) {
         if ($global -or $future.Count -gt 0) { $backend = @('*') }
-        elseif ($chain) { $backend = @('IdentityIntegrationTest','PersonalCenterIntegrationTest','SourceWorkflowIntegrationTest','KnowledgeWorkflowIntegrationTest','KnowledgeTaxonomyIntegrationTest','KnowledgeTaxonomyMigrationTest') }
+        elseif ($chain) { $backend = @('IdentityIntegrationTest','PersonalCenterIntegrationTest','SourceWorkflowIntegrationTest','SourceReadingIntegrationTest','SourceProcessingIntegrationTest','SourceParserBundleTest','SourceObjectStoreTest','SourceStorageMigrationTest','SourceFileMetadataTest','SourceValidationV2Test','EpubValidationTest','KnowledgeWorkflowIntegrationTest','KnowledgeProposalIntegrationTest','KnowledgeTaxonomyIntegrationTest','KnowledgeTaxonomyMigrationTest') }
     }
     if ('frontend' -in $Layers) {
         if ($global -or $future.Count -gt 0) { $front = @('*') }

@@ -12,6 +12,7 @@ $env:DB_PASSWORD = $state.password
 $env:JWT_SECRET = [guid]::NewGuid().ToString() + [guid]::NewGuid().ToString()
 $env:AI_INTERNAL_TOKEN = [guid]::NewGuid().ToString() + [guid]::NewGuid().ToString()
 $env:COOKIE_SECURE = 'false'
+. (Join-Path $PSScriptRoot 'Import-DevEnvironment.ps1')
 $env:JAVA_HOME = $JavaHome
 Push-Location (Join-Path $projectRoot 'backend')
 try {

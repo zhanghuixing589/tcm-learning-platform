@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import type {Evidence} from './api';
-defineProps<{evidence:Evidence[];versionNo?:number;anchorPrefix?:string}>();
+import {evidenceReaderLink} from './readerSelection';
+const props=defineProps<{evidence:Evidence[];versionNo?:number;anchorPrefix?:string;resourceId?:string;revisionId?:string}>();
+function target(source:Evidence){return source.id&&props.resourceId&&props.revisionId?`/knowledge/${props.resourceId}/versions/${props.revisionId}/evidence/${source.id}`:evidenceReaderLink(source)}
 </script>
 <template>
  <p v-if="!evidence.length" class="muted">此版本未提供可展示的来源依据。</p>
  <ol v-else class="knowledge-evidence">
   <li v-for="(source,index) in evidence" :key="source.id || index" :id="anchorPrefix && anchorPrefix+'-evidence-'+(index+1)">
    <header><span class="evidence-number">依据 {{index+1}}</span><span v-if="versionNo" class="evidence-version">知识第 {{versionNo}} 版</span></header>
-   <h3><RouterLink :to="`/sources/${source.documentId}${source.segmentId?'#segment-'+source.segmentId:''}`">{{source.documentTitle || '查看来源资料'}}</RouterLink></h3>
+   <h3><RouterLink :to="target(source)">{{source.documentTitle || '查看来源资料'}}</RouterLink></h3>
    <p v-if="source.locationLabel" class="evidence-location">原文定位：{{source.locationLabel}}</p>
    <figure v-if="source.quoteText"><figcaption>原文摘录</figcaption><blockquote>{{source.quoteText}}</blockquote></figure>
-   <RouterLink class="evidence-open" :to="`/sources/${source.documentId}${source.segmentId?'#segment-'+source.segmentId:''}`">查看来源详情 ↗</RouterLink>
+   <RouterLink class="evidence-open" :to="target(source)">查看来源详情 ↗</RouterLink>
   </li>
  </ol>
 </template>

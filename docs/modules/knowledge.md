@@ -1,5 +1,9 @@
 # 知识中心、药材与方剂
 
+第二版验收更新（2026-11-27）：六类型真实草稿、跨资料多引文、手机选文直接整理、知识审核、他人独立提案审核发布及固定版本引用定位已通过浏览器验收；新建提案保存跳转后busy释放与审核通知提案路径已修复。准确命令及分次结果见[交付验收](../workflow/tasks/2026-11-26-source-reading/acceptance.md)。
+
+来源阅读V2集成（2026-11-26）：KnowledgeReading提供真实条目匹配、个人摘录追加与授权引文预览；KnowledgeProposals保存独立提案，所有贡献者可建议修订，审核前不改原作者草稿/正式资源，批准时检查当前正式基线及作者是否已有待审/草稿，并保留资源owner。KnowledgeDtos.Evidence补充parseRunId/readingEditionId/locator/quoteHash/excerptId，服务端按规范原文重建引用；新增草稿更新expectedVersion，复制修订保留历史锚点。既有六类型结构化字段、目录/标签规则继续复用。实际通过与未验证范围见DEVELOPMENT_STATE。
+
 ## 当前分类体系（V10，2026-11-25）
 
 用户授权本轮完整业务重构，取代下方视觉任务“不改后端”的历史限制。固定六类型 + 类型专属动态目录 + 跨类型通用标签。KnowledgeTaxonomy / KnowledgeTaxonomyController维护目录、标签、权限和版本锁；复用content_categories/content_tags/revision_tags。公开目录按type过滤启用且非归档项；写入和筛选拒绝跨类型、停用或历史目录。KnowledgeService提交/审核批准复查有效性，标签随草稿保存与修订复制，tagId及标签名称可检索。来源/正式版本/收藏原规则不变。

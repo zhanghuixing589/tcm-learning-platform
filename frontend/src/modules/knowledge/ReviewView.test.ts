@@ -77,32 +77,144 @@ it("requires a review note and sends the currently displayed optimistic lock ver
 
 it("renders the frozen article submission with its section and manual references", async () => {
   const value = {
-    id: "8", revisionId: "9", documentId: null, title: "待审核文稿", kind: "ARTICLE" as const,
-    submittedBy: "2", submitterName: "作者", reviewerId: null, status: "PENDING", reviewNote: null, lockVersion: 0,
-    createdAt: "", events: [],
+    id: "8",
+    revisionId: "9",
+    documentId: null,
+    title: "待审核文稿",
+    kind: "ARTICLE" as const,
+    submittedBy: "2",
+    submitterName: "作者",
+    reviewerId: null,
+    status: "PENDING",
+    reviewNote: null,
+    lockVersion: 0,
+    createdAt: "",
+    events: [],
     article: {
-      id: "6", revisionId: "9", title: "冻结的稿件", body: "冻结的 **参考材料**[1]", revisionState: "IN_REVIEW",
-      sourceFormat: "MARKDOWN" as const, formatPolicyId: "1", sourceHash: "", versionNo: 2, sectionId: "4",
+      id: "6",
+      revisionId: "9",
+      title: "冻结的稿件",
+      body: "冻结的 **参考材料**[1]",
+      revisionState: "IN_REVIEW",
+      sourceFormat: "MARKDOWN" as const,
+      formatPolicyId: "1",
+      sourceHash: "",
+      versionNo: 2,
+      sectionId: "4",
       section: { id: "4", parentId: null, name: "学习交流", code: "study" },
-      references: [{
-        referenceKey: "376f0571-0706-410e-9041-3d95160dae85", displayNumber: 1, title: "冻结的文献",
-        authors: null, publicationYear: null, sourceName: null, doi: null, url: null, locationLabel: null,
-      }],
+      references: [
+        {
+          referenceKey: "376f0571-0706-410e-9041-3d95160dae85",
+          displayNumber: 1,
+          title: "冻结的文献",
+          authors: null,
+          publicationYear: null,
+          sourceName: null,
+          doi: null,
+          url: null,
+          locationLabel: null,
+        },
+      ],
     },
   };
   vi.spyOn(stageApi, "review").mockResolvedValue(value);
-  const requests = vi.spyOn(api.http, "get").mockResolvedValue({ data: { data: testPolicy } });
-  const router = createRouter({ history: createMemoryHistory(), routes: [
-    { path: "/reviews/:id", component: ReviewView },
-    { path: "/reviews", component: { template: "<div />" } },
-  ] });
+  const requests = vi
+    .spyOn(api.http, "get")
+    .mockResolvedValue({ data: { data: testPolicy } });
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: "/reviews/:id", component: ReviewView },
+      { path: "/reviews", component: { template: "<div />" } },
+    ],
+  });
   await router.push("/reviews/8");
-  const wrapper = mount(ReviewView, { global: { plugins: [createPinia(), router] } });
+  const wrapper = mount(ReviewView, {
+    global: { plugins: [createPinia(), router] },
+  });
   await flushPromises();
   expect(wrapper.text()).toContain("学习交流");
   expect(wrapper.get(".community-prose strong").text()).toBe("参考材料");
-  expect(wrapper.get(".community-prose a").attributes("href")).toBe("#reference-376f0571-0706-410e-9041-3d95160dae85");
+  expect(wrapper.get(".community-prose a").attributes("href")).toBe(
+    "#reference-376f0571-0706-410e-9041-3d95160dae85",
+  );
   expect(wrapper.get(".community-reference-list li").text()).toBe("冻结的文献");
-  expect(requests.mock.calls.map(([path]) => path)).toEqual(["/community/text-policy"]);
+  expect(requests.mock.calls.map(([path]) => path)).toEqual([
+    "/community/text-policy",
+  ]);
+  wrapper.unmount();
+});
+
+it("requires explicit partial warnings and sends a fixed coverage snapshot for source approval", async () => {
+  const pinia = createPinia();
+  useSessionStore(pinia).user = {
+    id: "1",
+    permissions: ["knowledge:review"],
+  } as never;
+  const value = {
+    id: "v2",
+    kind: "SOURCE",
+    title: "部分可用来源",
+    submittedBy: "2",
+    submitterName: "作者",
+    reviewerId: "1",
+    status: "PENDING",
+    lockVersion: 4,
+    events: [],
+    document: {
+      id: "s",
+      title: "资料",
+      sourceType: "BOOK",
+      reviewState: "IN_REVIEW",
+      availability: "ACTIVE",
+      processingSummary: {
+        overallOutcome: "PARTIAL_SUCCESS",
+        stages: { text: "PARTIAL_SUCCESS" },
+        warnings: [
+          {
+            code: "IMAGE_FAILED",
+            message: "第2页图片缺失",
+            severity: "WARNING",
+          },
+        ],
+        coverageSnapshotHash: "snapshot",
+        units: [
+          { id: "u1", unitNo: 1, title: "可靠页", textReliable: true },
+          { id: "u2", unitNo: 2, title: "扫描页", textReliable: false },
+        ],
+      },
+    },
+  };
+  vi.spyOn(stageApi, "review").mockResolvedValue(value as never);
+  const decide = vi
+    .spyOn(stageApi, "decide")
+    .mockResolvedValue({ ...value, status: "APPROVED" } as never);
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: "/reviews/:id", component: ReviewView }],
+  });
+  await router.push("/reviews/v2");
+  const wrapper = mount(ReviewView, { global: { plugins: [pinia, router] } });
+  await flushPromises();
+  await wrapper.get("#review-note").setValue("核对覆盖");
+  await wrapper.get("form").trigger("submit");
+  expect(decide).not.toHaveBeenCalled();
+  expect(wrapper.text()).toContain("请逐项核对并确认处理警告");
+  await wrapper.get("input[type=checkbox]").setValue(true);
+  const mode = wrapper
+    .findAll("select")
+    .find((s) => s.find('option[value="TEXT_CITABLE"]').exists())!;
+  await mode.setValue("TEXT_CITABLE");
+  const boxes = wrapper.findAll("input[type=checkbox]");
+  expect(boxes[2]!.attributes("disabled")).toBeDefined();
+  await boxes[1]!.setValue(true);
+  await wrapper.get("form").trigger("submit");
+  await flushPromises();
+  expect(decide).toHaveBeenCalledWith("v2", 4, "APPROVED", "核对覆盖", {
+    acknowledgedWarnings: ["IMAGE_FAILED"],
+    approvedUse: "TEXT_CITABLE",
+    approvedCoverage: { unitIds: ["u1"] },
+    coverageSnapshotHash: "snapshot",
+  });
   wrapper.unmount();
 });

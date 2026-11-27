@@ -18,22 +18,26 @@ public class ReviewService {
     private final ContentSupport c;
     private final KnowledgeService knowledge;
     private final CommunityArticleService articles;
+    private final cn.tcm.platform.source.SourceService sources;
+    private final cn.tcm.platform.source.SourceReadingData readingData;
+    private final cn.tcm.platform.knowledge.application.KnowledgeProposals proposals;
     private final TransactionTemplate existingReview;
     private final TransactionTemplate articleReview;
 
     public ReviewService(ContentSupport c, KnowledgeService knowledge, CommunityArticleService articles,
-                         PlatformTransactionManager transactions) {
+                         PlatformTransactionManager transactions,cn.tcm.platform.source.SourceService sources,cn.tcm.platform.source.SourceReadingData readingData,cn.tcm.platform.knowledge.application.KnowledgeProposals proposals) {
         this.c = c;
         this.knowledge = knowledge;
         this.articles = articles;
+        this.sources=sources;this.readingData=readingData;this.proposals=proposals;
         this.existingReview = new TransactionTemplate(transactions);
         this.articleReview = new TransactionTemplate(transactions);
         articleReview.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
     // 连接审核任务、提交版本、资源、来源文档与提交人，供列表和详情读取。
-    private static final String FROM=" FROM review_tasks t LEFT JOIN content_revisions v ON v.id=t.revision_id LEFT JOIN content_resources r ON r.id=v.resource_id LEFT JOIN source_documents d ON d.id=t.document_id JOIN sys_users u ON u.id=t.submitted_by ";
+    private static final String FROM=" FROM review_tasks t LEFT JOIN knowledge_revision_proposals kp ON kp.id=t.proposal_id LEFT JOIN content_revisions v ON v.id=t.revision_id LEFT JOIN content_resources r ON r.id=COALESCE(v.resource_id,kp.resource_id) LEFT JOIN source_documents d ON d.id=t.document_id JOIN sys_users u ON u.id=t.submitted_by ";
     // 统一选择任务字段和标题，并补充资源类型与提交人信息。
-    private static final String SELECT="SELECT t.*,COALESCE(v.title,d.title) AS title,r.resource_type,r.id AS resource_id,u.nickname AS submitter_name";
+    private static final String SELECT="SELECT t.*,COALESCE(v.title,d.title,JSON_UNQUOTE(JSON_EXTRACT(kp.payload,'$.title'))) AS title,r.resource_type,r.id AS resource_id,u.nickname AS submitter_name";
     private Map<String,Object> task(long id,boolean lock){
         if(!lock)return c.row(SELECT+FROM+" WHERE t.id=?",id);
         // Lock only the task here. Targets are locked explicitly first by decisions.
@@ -46,7 +50,7 @@ public class ReviewService {
     // 禁止审核本人提交的内容。
     private void notSelf(long actor,Map<String,Object> task){if(number(task.get("submitted_by"))==actor)throw new ApiException(403,"SELF_REVIEW_FORBIDDEN","不能审核本人提交的内容");}
     // 将数据库行转换为前端使用的驼峰字段视图。
-    private Map<String,Object> view(Map<String,Object> t){return map("id",sid(t.get("id")),"revisionId",sid(t.get("revision_id")),"documentId",sid(t.get("document_id")),"title",t.get("title"),"kind",t.get("document_id")!=null?"SOURCE":t.get("resource_type"),"submittedBy",sid(t.get("submitted_by")),"submitterName",t.get("submitter_name"),"reviewerId",sid(t.get("reviewer_id")),"status",t.get("status"),"reviewNote",t.get("review_note"),"lockVersion",t.get("lock_version"),"createdAt",utc(t.get("created_at")));}
+    private Map<String,Object> view(Map<String,Object> t){return map("id",sid(t.get("id")),"proposalId",sid(t.get("proposal_id")),"revisionId",sid(t.get("revision_id")),"documentId",sid(t.get("document_id")),"title",t.get("title"),"kind",t.get("proposal_id")!=null?"KNOWLEDGE_PROPOSAL":t.get("document_id")!=null?"SOURCE":t.get("resource_type"),"submittedBy",sid(t.get("submitted_by")),"submitterName",t.get("submitter_name"),"reviewerId",sid(t.get("reviewer_id")),"status",t.get("status"),"reviewNote",t.get("review_note"),"lockVersion",t.get("lock_version"),"createdAt",utc(t.get("created_at")));}
     // 按权限范围、状态和分页查询任务。
     public PageResult<Map<String,Object>> list(long actor,int page,int size,String status){
         int offset=PageResult.offset(page,size);boolean professional=c.has(actor,"knowledge:review"),community=c.has(actor,"community:moderate");if(!professional&&!community)throw new ApiException(403,"FORBIDDEN","没有审核权限");
@@ -56,16 +60,15 @@ public class ReviewService {
     }
     // 审核详情读取任务绑定的冻结版本，而不是作者后来的草稿。
     public Map<String,Object> detail(long actor,long id){var t=task(id,false);permitted(actor,t);var out=view(t);
-        if(t.get("document_id")!=null)out.put("document",document(number(t.get("document_id"))));
+        if(t.get("proposal_id")!=null)out.put("proposal",proposals.detail(actor,number(t.get("proposal_id"))));
+        else if(t.get("document_id")!=null)out.put("document",document(number(t.get("document_id"))));
         else if("KNOWLEDGE".equals(t.get("resource_type")))out.put("knowledge",knowledge.detail(number(t.get("revision_id")),false));
         else out.put("article", articles.frozen(number(t.get("resource_id")), number(t.get("revision_id"))));
         out.put("events",c.db.queryForList("SELECT * FROM review_events WHERE review_task_id=? ORDER BY id",id).stream().map(e->map("id",sid(e.get("id")),"actorId",sid(e.get("actor_id")),"action",e.get("action"),"note",e.get("note"),"createdAt",utc(e.get("created_at")))).toList());return out;
     }
     // 查询来源资料及最近解析批次。
     private Map<String,Object> document(long id){
-        var d=c.row("SELECT d.*,g.original_name AS file_name FROM source_documents d LEFT JOIN file_upload_grants g ON g.file_id=d.file_id AND g.user_id=d.submitted_by WHERE d.id=?",id);
-        var out=map("id",""+id,"title",d.get("title"),"sourceType",d.get("source_type"),"author",d.get("author"),"publisher",d.get("publisher"),"publicationYear",d.get("publication_year"),"sourceUrl",d.get("source_url"),"bibliographicNote",d.get("bibliographic_note"),"fileId",sid(d.get("file_id")),"fileName",d.get("file_name"),"reviewState",d.get("review_state"),"availability",d.get("availability"),"submittedBy",sid(d.get("submitted_by")),"parentDocumentId",sid(d.get("parent_document_id")),"createdAt",utc(d.get("created_at")));
-        var runs=c.db.queryForList("SELECT * FROM document_parse_runs WHERE document_id=? ORDER BY id DESC LIMIT 1",id);out.put("parseRun",runs.isEmpty()?null:map("id",sid(runs.get(0).get("id")),"status",runs.get(0).get("status"),"errorMessage",runs.get(0).get("error_message"),"parseVersion",runs.get(0).get("parse_version")));return out;
+        return sources.view(c.row("SELECT * FROM source_documents WHERE id=?",id));
     }
     private static boolean article(Map<String, Object> task) {
         return "ARTICLE".equals(task.get("resource_type"));
@@ -132,7 +135,8 @@ public class ReviewService {
             // 先做权限与本人回避检查，拿到任务锁后还需重新核验。
             permitted(actor, initial);
             notSelf(actor, initial);
-            if (initial.get("revision_id") != null) {
+            if(initial.get("proposal_id")!=null){target=proposals.reviewLock(number(initial.get("proposal_id")));}
+            else if (initial.get("revision_id") != null) {
                 // 知识发布先取得其来源和关联资源锁。
                 knowledge.lockPublication(number(initial.get("revision_id")));
                 target = c.row("SELECT * FROM content_revisions WHERE id=? FOR UPDATE", initial.get("revision_id"));
@@ -158,7 +162,8 @@ public class ReviewService {
         boolean approved = "APPROVED".equals(input.decision());
         Long revision = t.get("revision_id") == null ? null : number(t.get("revision_id"));
         Long resource = null;
-        if (revision != null) {
+        if(t.get("proposal_id")!=null){resource=number(target.get("resource_id"));if(approved)proposals.approve(actor,number(t.get("proposal_id")));else proposals.reject(actor,number(t.get("proposal_id")));}
+        else if (revision != null) {
             resource = number(target.get("resource_id"));
             if (isArticle) {
                 articles.requireReviewTarget(articleTarget, number(t.get("submitted_by")), revision, approved);
@@ -178,12 +183,12 @@ public class ReviewService {
                         UPDATE content_resources SET published_revision_id=?,visibility_status='PUBLISHED',
                             published_at=COALESCE(published_at,UTC_TIMESTAMP(3)),suspended_reason=NULL,lock_version=lock_version+1 WHERE id=?
                         """, revision, resource);
-                c.job("VECTOR_INDEX", revision, "v1");
-                c.job("GRAPH_SYNC", revision, "v1");
+                if(knowledge.indexable(revision)){c.job("VECTOR_INDEX", revision, "v1");c.job("GRAPH_SYNC", revision, "v1");}
             }
         } else {
             if (!"IN_REVIEW".equals(target.get("review_state"))) throw ApiException.conflict("来源状态已变化");
             if (approved && !"ACTIVE".equals(target.get("availability"))) throw ApiException.conflict("停用来源不能通过审核");
+            if(approved)approveSource(target,input);
             c.db.update("UPDATE source_documents SET review_state=? WHERE id=?", input.decision(), t.get("document_id"));
         }
         c.db.update("""
@@ -193,13 +198,28 @@ public class ReviewService {
         c.db.update("INSERT INTO review_events(review_task_id,actor_id,action,note) VALUES(?,?,?,?)", id, actor,
                 approved ? "APPROVE" : "REJECT", note);
         c.audit(actor, "REVIEW_" + input.decision(), "REVIEW", id);
-        String path = resource == null ? "/contribute/sources/" + t.get("document_id")
+        String path = t.get("proposal_id") != null ? "/contribute/proposals/" + t.get("proposal_id")
+                : resource == null ? "/contribute/sources/" + t.get("document_id")
                 : (isArticle ? "/account/articles/" : "/contribute/knowledge/") + resource;
         c.db.update("""
                 INSERT INTO user_notifications(user_id,event_key,kind,title,body,resource_id,relative_path)
                 VALUES(?,?,'REVIEW_RESULT',?,?,?,?) ON DUPLICATE KEY UPDATE id=id
                 """, t.get("submitted_by"), "review:" + id, "内容审核结果", note, resource, path);
         return detail(actor, id);
+    }
+
+    private void approveSource(Map<String,Object> target,ReviewDtos.Decision input){
+        if(!"DECLARED".equals(target.get("rights_status")))throw ApiException.conflict("请先声明来源版权与授权范围");
+        if(target.get("reviewed_reading_edition_id")==null){if(cn.tcm.platform.source.SourceRights.flag(target.get("reader_required")))throw ApiException.conflict("缺少提交时冻结的阅读版本");return;}
+        long document=number(target.get("id"));var summary=sources.processingSummary(document);
+        if(!Objects.equals(sid(target.get("reviewed_reading_edition_id")),summary.get("readingEditionId"))||!Objects.equals(input.coverageSnapshotHash(),summary.get("coverageSnapshotHash")))throw ApiException.conflict("处理覆盖已变化，请刷新审核详情");
+        var warnings=readingData.tree(readingData.encoded(summary.get("warnings")));var required=new HashSet<String>();for(var w:warnings)required.add(w.isTextual()?w.asText():w.path("code").asText());
+        if(input.acknowledgedWarnings()==null&&!required.isEmpty()||input.acknowledgedWarnings()!=null&&!new HashSet<>(input.acknowledgedWarnings()).containsAll(required))throw ApiException.conflict("请明确确认全部处理警告");
+        if(!Set.of("REFERENCE_ONLY","TEXT_CITABLE").contains(Objects.toString(input.approvedUse(),"")))throw ApiException.invalid("请选择来源批准用途");
+        var selected=new HashSet<String>();if(input.approvedCoverage()!=null)for(var id:readingData.tree(readingData.encoded(input.approvedCoverage())).path("unitIds"))selected.add(id.asText());
+        var reliable=new HashSet<String>();for(var u:readingData.tree(readingData.encoded(summary.get("units"))))if(u.path("textReliable").asBoolean())reliable.add(u.path("id").asText());
+        if(!reliable.containsAll(selected)||input.approvedUse().equals("TEXT_CITABLE")&&selected.isEmpty()||input.approvedUse().equals("REFERENCE_ONLY")&&!selected.isEmpty())throw ApiException.invalid("批准范围须与可靠文字单元及用途一致");
+        c.db.update("UPDATE source_documents SET approved_use=?,approved_coverage=?,acknowledged_warnings=? WHERE id=?",input.approvedUse(),readingData.encoded(map("unitIds",selected)),readingData.encoded(input.acknowledgedWarnings()==null?List.of():input.acknowledgedWarnings()),document);
     }
 
     // 知识批准后更新正式名称和别名投影，草稿字段不提前变成正式数据。

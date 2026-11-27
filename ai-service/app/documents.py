@@ -7,6 +7,8 @@ import zipfile
 from pathlib import PurePath
 from defusedxml import ElementTree
 from pypdf import PdfReader, apply_configuration
+from app.epub import epub_segments
+from app.reader import build_reading
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_EXPANDED = 32 * 1024 * 1024
@@ -15,7 +17,7 @@ W = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 class DocumentInvalid(ValueError):
     pass
 
-def pdf_segments(body):
+def pdf_segments(body, reading_pages=None):
     limits = dict(maximum_declared_stream_length=MAX_EXPANDED,
                   array_based_stream_maximum_output_length=MAX_EXPANDED,
                   zlib_maximum_output_length=MAX_EXPANDED,
@@ -42,6 +44,8 @@ def pdf_segments(body):
             if total>MAX_EXPANDED:
                 raise DocumentInvalid('PDF文本流大小超限')
             text=page.extract_text(visitor_text=bound_text) or ''
+            if reading_pages is not None:
+                reading_pages.append(text)
             for p in re.split(r'\n\s*\n',text):
                 result.append((f'第 {i} 页',None,p.strip()))
         return result
@@ -55,6 +59,7 @@ def parse_document(name: str, encoded: str) -> dict:
             raise DocumentInvalid('文件须非空且最大10MB')
         suffix = PurePath(name).suffix.lower()
         raw_segments = []
+        reading_pages = []
         if suffix == '.txt':
             if body.startswith((b'PK', b'%PDF-', b'MZ')):
                 raise DocumentInvalid('文件实际格式与TXT不符')
@@ -84,12 +89,14 @@ def parse_document(name: str, encoded: str) -> dict:
                     if match and text:
                         level=int(match.group(1)); headings={k:v for k,v in headings.items() if k<level}; headings[level]=text
                     raw_segments.append((f'段落 {i}', ' / '.join(headings.values())[:500] or None, text))
+        elif suffix == '.epub':
+            raw_segments=epub_segments(body)
         elif suffix == '.pdf':
             if not body.startswith(b'%PDF-'):
                 raise DocumentInvalid('文件实际格式与PDF不符')
-            raw_segments=pdf_segments(body)
+            raw_segments=pdf_segments(body, reading_pages)
         else:
-            raise DocumentInvalid('仅支持UTF-8 TXT、DOCX和文本PDF')
+            raise DocumentInvalid('仅支持UTF-8 TXT、DOCX、文本PDF和未加密文本EPUB')
         segments=[]; total=0
         for position,heading,text in raw_segments:
             if not text:
@@ -100,7 +107,13 @@ def parse_document(name: str, encoded: str) -> dict:
             segments.append({'segmentNo':len(segments)+1,'pageLabel':position,'headingPath':heading,'body':text})
         if not segments:
             raise DocumentInvalid('未提取到文本；不支持扫描PDF或OCR')
-        return {'parserName':'deterministic-v1','segments':segments}
+        reading = build_reading(suffix, body, raw_segments, reading_pages)
+        result = {'parserName':'deterministic-v1','segments':segments,'reading':reading}
+        # Match the Java HTTP client's bounded response, including legacy segments.
+        import json
+        if len(json.dumps(result, ensure_ascii=False).encode()) > 11 * 1024 * 1024:
+            raise DocumentInvalid('解析结果大小超限')
+        return result
     except DocumentInvalid:
         raise
     except (Exception,) as error:

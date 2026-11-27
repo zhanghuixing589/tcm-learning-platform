@@ -8,8 +8,9 @@ spring:
     name: tcm-platform
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 11MB
+      max-file-size: ${SOURCE_MAX_ORIGINAL_BYTES:52428800}B
+      max-request-size: 53MB
+      file-size-threshold: 0B
   datasource:
     url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/tcm_learning?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8}
     username: ${DB_USERNAME:tcm}
@@ -44,7 +45,19 @@ management:
 tcm:
   jobs:
     enabled: ${JOBS_ENABLED:true}
+  source:
+    limits:
+      max-original-bytes: ${SOURCE_MAX_ORIGINAL_BYTES:52428800}
+      max-expanded-bytes: ${SOURCE_MAX_EXPANDED_BYTES:209715200}
+      max-archive-entries: ${SOURCE_MAX_ARCHIVE_ENTRIES:5000}
+      max-compression-ratio: ${SOURCE_MAX_COMPRESSION_RATIO:200}
   storage:
+    source-temp-directory: ${SOURCE_TEMP_DIR:${java.io.tmpdir}/tcm-source-staging}
+    minio:
+      endpoint: ${TCM_MINIO_ENDPOINT:http://127.0.0.1:19000}
+      bucket: ${TCM_MINIO_BUCKET:tcm-learning-sources}
+      access-key: ${TCM_MINIO_APP_ACCESS_KEY:}
+      secret-key: ${TCM_MINIO_APP_SECRET_KEY:}
     avatar-directory: ${AVATAR_STORAGE_DIR:${java.io.tmpdir}/tcm-platform-avatars}
     source-directory: ${SOURCE_STORAGE_DIR:${java.io.tmpdir}/tcm-platform-sources}
   security:

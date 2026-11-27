@@ -43,7 +43,7 @@ public class SecurityConfiguration {
                 .exceptionHandling(c->c.authenticationEntryPoint((req,res,e)->error(json,res,401,"UNAUTHENTICATED","请先登录"))
                         .accessDeniedHandler((req,res,e)->error(json,res,403,"FORBIDDEN","没有执行此操作的权限")))
                 .authorizeHttpRequests(c->c.requestMatchers("/actuator/health","/actuator/health/liveness","/actuator/health/readiness",
-                        "/api/v1/auth/register","/api/v1/auth/login","/api/v1/auth/refresh","/api/v1/auth/logout","/api/v1/capabilities").permitAll()
+                        "/internal/v1/source-inputs/*","/api/v1/auth/register","/api/v1/auth/login","/api/v1/auth/refresh","/api/v1/auth/logout","/api/v1/capabilities").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(new OncePerRequestFilter() {
                     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain) throws ServletException,IOException {

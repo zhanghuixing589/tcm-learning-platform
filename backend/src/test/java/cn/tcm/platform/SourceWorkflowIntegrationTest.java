@@ -41,7 +41,8 @@ class SourceWorkflowIntegrationTest {
     private JsonNode call(MockHttpServletRequestBuilder b,int status) throws Exception {return json.readTree(mvc.perform(b).andExpect(status().is(status)).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)).path("data");}
     private JsonNode body(User u,String method,String path,Map<String,?> data,int status) throws Exception {return call(as(u,(method.equals("PATCH")?patch(path):post(path)).contentType("application/json").content(json.writeValueAsString(data))),status);}
     private JsonNode upload(User u,String value) throws Exception {return call(as(u,multipart("/api/v1/files").file(new MockMultipartFile("file","source.txt","text/plain",value.getBytes(StandardCharsets.UTF_8)))),200);}
-    private JsonNode create(User u,String file) throws Exception {return body(u,"POST","/api/v1/source-documents",Map.of("title","中医资料","sourceType","BOOK","fileId",file),200);}
+    private Map<String,Object> rights(){return Map.of("licenseType","AUTHORIZED","copyrightSource","来源测试作者","authorizationScope","阅读、下载与引用测试授权","publicReadingAllowed",true,"publicDownloadAllowed",true,"quoteDisplayAllowed",true,"ragUseAllowed",false);}
+    private JsonNode create(User u,String file) throws Exception {return body(u,"POST","/api/v1/source-documents",Map.of("title","中医资料","sourceType","BOOK","fileId",file,"rights",rights()),200);}
     @Test void actualUploadDeduplicatesAcrossUsersWithoutGrantingGuessersAccess() throws Exception {
         User a=user("CONTRIBUTOR"),b=user("CONTRIBUTOR"),c=user("LEARNER");
         JsonNode one=upload(a,"药材来源 "+UUID.randomUUID()); String id=one.path("id").asText();
@@ -114,7 +115,7 @@ class SourceWorkflowIntegrationTest {
     }
     @Test void uploadRejectsSpoofedUtf8CorruptOfficeAndOversizedBytes() throws Exception {
         User a=user("CONTRIBUTOR");
-        for(var sample:List.of(new MockMultipartFile("file","a.pdf","application/pdf","fake".getBytes()),new MockMultipartFile("file","a.docx","application/octet-stream","PK fake".getBytes()),new MockMultipartFile("file","a.txt","text/plain",new byte[]{(byte)0xff}),new MockMultipartFile("file","a.txt","text/plain",new byte[10*1024*1024+1]))){call(as(a,multipart("/api/v1/files").file(sample)),400);}
+        for(var sample:List.of(new MockMultipartFile("file","a.pdf","application/pdf","fake".getBytes()),new MockMultipartFile("file","a.docx","application/octet-stream","PK fake".getBytes()),new MockMultipartFile("file","a.txt","text/plain",new byte[]{(byte)0xff}),new MockMultipartFile("file","a.txt","text/plain",new byte[50*1024*1024+1]))){call(as(a,multipart("/api/v1/files").file(sample)),400);}
     }
     @Test void realDocxAndTextPdfUploadAndDocxEntityPayloadIsRejected() throws Exception {
         User a=user("CONTRIBUTOR");
@@ -140,7 +141,7 @@ class SourceWorkflowIntegrationTest {
     }
     @Test void bibliographicWebSourcesAreNotFetchedAndCanSubmitWithoutAFile() throws Exception {
         User a=user("CONTRIBUTOR");
-        JsonNode d=body(a,"POST","/api/v1/source-documents",Map.of("title","出版书目","sourceType","WEB","sourceUrl","https://example.org/catalog"),200);
+        JsonNode d=body(a,"POST","/api/v1/source-documents",Map.of("title","出版书目","sourceType","WEB","sourceUrl","https://example.org/catalog","rights",rights()),200);
         String id=d.path("id").asText();
         call(as(a,post("/api/v1/source-documents/"+id+"/parse")),400);
         assertThat(call(as(a,post("/api/v1/source-documents/"+id+"/submit")),200).path("reviewState").asText()).isEqualTo("IN_REVIEW");

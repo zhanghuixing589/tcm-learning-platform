@@ -1,5 +1,13 @@
 # 模块索引
 
+## 来源阅读第二版实施与验收（2026-11-27）
+
+[设计](docs/superpowers/specs/2026-11-26-source-reading-design.md)、[实施契约](contracts/source-reading-v2.md)、[当前状态](DEVELOPMENT_STATE.md)。用户D18已恢复实施，V11/V12/V13已应用。source新增SourceObjectStore/SourceFileMetadata/SourceStorageMigration、SourceImportService、SourceReader/SourceReaderController、SourceReadingData、SourceRights/SourceEvidence、SourceInputController；knowledge新增KnowledgeReading/KnowledgeProposals及Controller；content审核识别独立提案及来源覆盖。AI入口process_api/processing/reader/conversion；前端SourceWizardView/SourceOverviewView/SourceReaderView、Reader*、ExcerptLibrary、KnowledgeProposalView、EvidencePreviewView和共享KnowledgeDraftForm。新增reading_editions/units/blocks/toc_nodes/assets/progress/excerpts、rights_events/confirmation_requests、knowledge_revision_proposals/proposal_evidence，旧parse/segments/evidence保留。新增专项SourceReadingIntegrationTest、SourceProcessingIntegrationTest、SourceParserBundleTest、SourceObjectStoreTest、SourceFileMetadataTest、SourceValidationV2Test、KnowledgeProposalIntegrationTest及frontend/e2e/source-reading.spec.ts；Test-Policy共享链已同步，新增Java测试仍触发完整后端。本轮三条真实浏览器业务验收已完成；准确分次结果、适用限制及运行入口见docs/workflow/tasks/2026-11-26-source-reading/acceptance.md和根状态。
+
+## 来源EPUB增量（2026-11-25）
+
+source新增backend/.../source/EpubFiles.java与ai-service/app/epub.py；由SourceFiles.validate、documents.parse_document接入，SourceView.vue接受.epub。复用既有API/表/权限/版本审核，新增J/source/EpubValidationTest.java和AI/tests/test_epub.py；SourceView.test.ts覆盖EPUB上传后导航旧回写隔离；frontend/e2e/epub.spec.ts覆盖真实上传/解析/审核、私有访问与下载，支持本机书籍摘要比对。详细边界见docs/modules/source.md、contracts/README.md及docs/workflow/tasks/2026-11-25-epub.md；2026-11-26已独立完成部署和实际书籍浏览器验收，准确测试版本及边界见任务记录。
+
 核对日期：2026-11-24，HEAD `9341620d` 加本地未提交改动。这里只保存入口；每项实现状态以对应模块文档为准，不把空目录、数据库预建表或设计接口计为已实现。
 
 “已实现”表示已有代码和历史验收依据，不承诺当前工作区构建通过。本次验证发现 KnowledgeService 有重复 update 方法导致编译阻塞，准确结果与位置见 DEVELOPMENT_STATE.md。

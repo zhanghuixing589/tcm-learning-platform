@@ -88,6 +88,13 @@ describe("knowledge authoring", () => {
     expect(value.ingredients[0]!.evidenceIndex).toBe(-1);
     expect(value.relations[0]!.evidenceIndex).toBe(1);
   });
+  it("preserves exact whitespace when editing an immutable reading citation", () => {
+    const value = blankKnowledge();
+    value.evidence = [{ documentId: "1", readingEditionId: "2", quoteText: " 原文\n" }];
+    expect(knowledgePayload(value).evidence[0]!.quoteText).toBe(" 原文\n");
+    value.evidence[0]!.readingEditionId=undefined;value.evidence[0]!.quoteHash='trusted-hash';
+    expect(knowledgePayload(value).evidence[0]!.quoteText).toBe(" 原文\n");
+  });
   it("requires human location for an unlinked quote and a formula origin", () => {
     const value = blankKnowledge("FORMULA");
     value.canonicalName = value.title = "桂枝汤";

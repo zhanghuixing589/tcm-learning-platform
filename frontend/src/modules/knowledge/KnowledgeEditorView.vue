@@ -3,7 +3,6 @@ import { computed, ref, watch } from "vue";
 import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import {
   stageApi,
-  typeLabels,
   stateLabels,
   type Category,
   type KnowledgeTag,
@@ -13,13 +12,11 @@ import {
 import {
   blankKnowledge,
   knowledgePayload,
-  removeEvidence,
   validateKnowledge,
 } from "./editor";
 import { useWorkspace } from "./useWorkspace";
 import WorkspaceState from "./WorkspaceState.vue";
-import EvidenceEditor from "./EvidenceEditor.vue";
-import FactsEditor from "./FactsEditor.vue";
+import KnowledgeDraftForm from "./KnowledgeDraftForm.vue";
 import VersionCompare from "./VersionCompare.vue";
 import "./stage.css";
 const route = useRoute(),
@@ -29,16 +26,13 @@ const item = ref<KnowledgeDetail | null>(null),
   form = ref<KnowledgeInput>(blankKnowledge()),
   categories = ref<Category[]>([]),
   tags = ref<KnowledgeTag[]>([]),
-  aliases = ref(""),
   snapshot = ref(""),
   validation = ref<string[]>([]);
-const allowedCategories = computed(()=>categories.value.filter(category=>category.type===form.value.type));
 const isNew = computed(() => route.params.id === "new");
 const editable = computed(
   () => isNew.value || item.value?.revisionState === "DRAFT",
 );
-const current = () =>
-  JSON.stringify({ form: form.value, aliases: aliases.value });
+const current = () => JSON.stringify(form.value);
 const dirty = computed(
   () => editable.value && snapshot.value !== "" && current() !== snapshot.value,
 );
@@ -50,13 +44,12 @@ function apply(value: KnowledgeDetail) {
     herb: value.herb || blankKnowledge(value.type).herb,
     formula: value.formula || blankKnowledge(value.type).formula,
     categoryId: value.categoryId || undefined,
-    tagIds: value.tags?.map(tag=>tag.id) || [],
+    tagIds: value.tags?.map((tag) => tag.id) || [],
     aliases: [...value.aliases],
     evidence: value.evidence.map((x) => ({ ...x })),
     ingredients: value.ingredients.map((x) => ({ ...x })),
     relations: value.relations.map((x) => ({ ...x })),
   };
-  aliases.value = value.aliases.join("\n");
   snapshot.value = current();
   validation.value = [];
 }
@@ -76,14 +69,12 @@ function refresh() {
       if (value.draft) apply(value.draft);
       else {
         form.value = blankKnowledge();
-        aliases.value = "";
         snapshot.value = current();
       }
     },
   );
 }
 function payload() {
-  form.value.aliases = aliases.value.split(/[\n、,，]/);
   return knowledgePayload(form.value);
 }
 function save() {
@@ -95,7 +86,10 @@ function save() {
   }
   act(
     () =>
-      stageApi.saveDraft(isNew.value ? null : String(route.params.id), value),
+      stageApi.saveDraft(isNew.value ? null : String(route.params.id), {
+        ...value,
+        expectedVersion: item.value?.lockVersion,
+      }),
     (result) => {
       apply(result);
       if (isNew.value) router.replace(`/contribute/knowledge/${result.id}`);
@@ -172,79 +166,18 @@ onBeforeRouteLeave(
           <li v-for="text in validation" :key="text">{{ text }}</li>
         </ul>
       </div>
-      <p v-if="item?.categoryLegacy" class="stage-file-note">原目录为历史归档目录。原正式版本保持不变，本次保存前请选择所属类型的新目录或未分类。</p>
+      <p v-if="item?.categoryLegacy" class="stage-file-note">
+        原目录为历史归档目录。原正式版本保持不变，本次保存前请选择所属类型的新目录或未分类。
+      </p>
       <form @submit.prevent="save">
-        <fieldset class="taxonomy-tags" :disabled="!editable"><legend>通用标签（可跨知识类型，最多20项）</legend><p v-if="!tags.length" class="stage-hint">暂无可选标签，由管理员维护。</p><label v-for="tag in tags" :key="tag.id"><input v-model="form.tagIds" type="checkbox" :value="tag.id"/>{{tag.name}}</label><label v-for="tag in item?.tags?.filter(tag=>!tags.some(active=>active.id===tag.id)) || []" :key="tag.id"><input v-model="form.tagIds" type="checkbox" :value="tag.id"/>{{tag.name}}（已停用，保存前取消）</label></fieldset>
-        <div class="stage-grid">
-          <label class="stage-field"
-            >知识类型<select
-              v-model="form.type"
-              @change="form.categoryId=undefined"
-              aria-label="知识类型"
-              :disabled="!isNew || !editable"
-            >
-              <option
-                v-for="(label, type) in typeLabels"
-                :key="type"
-                :value="type"
-              >
-                {{ label }}
-              </option></select
-            ><small>创建后知识类型固定，新版本沿用同一类型。</small></label
-          ><label class="stage-field"
-            >类型专属目录<select v-model="form.categoryId" :disabled="!editable">
-              <option :value="undefined">未分类</option>
-              <option v-if="form.categoryId && !allowedCategories.some(category=>category.id===form.categoryId)" :value="form.categoryId" disabled>原目录已归档或停用，请重新选择</option>
-              <option
-                v-for="category in allowedCategories"
-                :key="category.id"
-                :value="category.id"
-              >
-                {{ category.name }}
-              </option>
-            </select></label
-          ><label class="stage-field"
-            >规范名称<input
-              v-model="form.canonicalName"
-              required
-              maxlength="160"
-              :disabled="!editable" /></label
-          ><label class="stage-field"
-            >知识标题<input
-              v-model="form.title"
-              required
-              maxlength="255"
-              :disabled="!editable"
-          /></label>
-        </div>
-        <label class="stage-field"
-          >别名<textarea
-            v-model="aliases"
-            rows="2"
-            :disabled="!editable"
-            placeholder="每行一个别名，也可用顿号分隔"
-          ></textarea></label
-        ><label class="stage-field"
-          >知识正文<textarea
-            v-model="form.body"
-            rows="10"
-            required
-            :disabled="!editable"
-            maxlength="100000"
-          ></textarea></label
-        ><label class="stage-field"
-          >变更说明<textarea
-            v-model="form.changeNote"
-            :disabled="!editable"
-            rows="2"
-            maxlength="1000"
-            placeholder="说明新增或修订了哪些内容"
-          ></textarea></label
-        ><EvidenceEditor
-          v-model="form.evidence"
-          :disabled="!editable"
-          @remove="removeEvidence(form, $event)"
-        /><FactsEditor :value="form" :disabled="!editable" />
+        <KnowledgeDraftForm
+          v-model="form"
+          :categories="categories"
+          :tags="tags"
+          :editable="editable"
+          :is-new="isNew"
+          :previous-tags="item?.tags"
+        />
         <div class="stage-actions stage-sticky-actions">
           <el-button
             v-if="editable"

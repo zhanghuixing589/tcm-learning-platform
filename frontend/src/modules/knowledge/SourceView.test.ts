@@ -53,7 +53,7 @@ async function setup() {
   await flushPromises();
   return { router, wrapper };
 }
-it("never patches another source after navigation while its file is uploading", async () => {
+it.each(["new.txt", "中医.EPUB"])("never patches another source after navigation while %s is uploading", async (fileName) => {
   vi.spyOn(stageApi, "source").mockImplementation(async (id) => document(id));
   let resolveUpload!: (value: any) => void;
   vi.spyOn(stageApi, "upload").mockImplementation(
@@ -68,11 +68,12 @@ it("never patches another source after navigation while its file is uploading", 
   const { router, wrapper } = await setup();
   const input = wrapper.get("input[type=file]");
   Object.defineProperty(input.element, "files", {
-    value: [new File(["test"], "new.txt", { type: "text/plain" })],
+    value: [new File(["test"], fileName)],
   });
   await input.trigger("change");
   await wrapper.get("form").trigger("submit");
   await flushPromises();
+  expect(stageApi.upload).toHaveBeenCalled();
   await router.push("/contribute/sources/22");
   await flushPromises();
   resolveUpload({ id: "99", originalName: "new.txt" });

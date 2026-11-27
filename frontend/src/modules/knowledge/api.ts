@@ -12,6 +12,9 @@ export const typeLabels = {
 } as const;
 export type KnowledgeType = keyof typeof typeLabels;
 export const stateLabels: Record<string, string> = {
+  PARTIAL_SUCCESS: "部分可用",
+  BLOCKED: "已阻断",
+  SKIPPED: "未执行",
   DRAFT: "草稿",
   IN_REVIEW: "审核中",
   PENDING: "待审核",
@@ -40,7 +43,12 @@ export const sourceTypeLabels: Record<string, string> = {
   COMMUNITY: "社区资料",
   OTHER: "其他",
 };
-export interface KnowledgeTag { id:string; name:string; active:boolean; lockVersion?:number; }
+export interface KnowledgeTag {
+  id: string;
+  name: string;
+  active: boolean;
+  lockVersion?: number;
+}
 export interface Category {
   type?: KnowledgeType | null;
   active?: boolean;
@@ -57,7 +65,36 @@ export interface ParseRun {
   errorMessage: string | null;
   parseVersion: string;
 }
+export interface SourceRights {
+  licenseType: string;
+  copyrightSource: string;
+  authorizationScope: string;
+  publicReadingAllowed: boolean;
+  publicDownloadAllowed: boolean;
+  quoteDisplayAllowed: boolean;
+  ragUseAllowed: boolean;
+}
 export interface SourceDocument {
+  rightsStatus?: 'LEGACY_UNCONFIRMED'|'UNCONFIRMED'|'DECLARED';
+  reviewedRights?: SourceRights | null;
+  readerBuild?: {id:string;status:string;errorMessage?:string|null}|null;
+  processingJob?: {id:string;status:string;errorMessage?:string|null}|null;
+  approvedUse?: "REFERENCE_ONLY" | "TEXT_CITABLE";
+  processingSummary?: {
+    overallOutcome: string;
+    stages: Record<string, unknown>;
+    warnings: import("./readerApi").ReaderWarning[];
+    coverageSnapshotHash?: string;
+    units: {
+      id: string;
+      unitNo: number;
+      title: string;
+      textReliable: boolean;
+    }[];
+  };
+  rights?: SourceRights;
+  lockVersion?: number;
+  readingEditionId?: string | null;
   id: string;
   title: string;
   sourceType: string;
@@ -76,6 +113,8 @@ export interface SourceDocument {
   parseRun: ParseRun | null;
 }
 export interface SourceInput {
+  rights?: SourceRights;
+  expectedVersion?: number;
   fileId?: string;
   title: string;
   sourceType: string;
@@ -103,6 +142,11 @@ export interface UploadedFile {
   deduplicated: boolean;
 }
 export interface Evidence {
+  excerptId?: string;
+  parseRunId?: string;
+  readingEditionId?: string;
+  locator?: Record<string, unknown>;
+  quoteHash?: string;
   id?: string;
   documentId: string;
   segmentId?: string;
@@ -143,6 +187,7 @@ export interface FormulaFacts {
   precautions: string;
 }
 export interface KnowledgeInput {
+  expectedVersion?: number;
   tagIds?: string[];
   type: KnowledgeType;
   canonicalName: string;
@@ -191,14 +236,20 @@ export interface KnowledgeDetail extends KnowledgeSummary {
 }
 // The public search endpoint already returns these filtered detail fields.
 // Optional fields preserve compatibility with existing summary-only consumers.
-export type KnowledgeCatalogEntry = KnowledgeSummary & Partial<Pick<KnowledgeDetail,
-  'aliases' | 'herb' | 'formula' | 'ingredients' | 'evidence' | 'relations'>>;
+export type KnowledgeCatalogEntry = KnowledgeSummary &
+  Partial<
+    Pick<
+      KnowledgeDetail,
+      "aliases" | "herb" | "formula" | "ingredients" | "evidence" | "relations"
+    >
+  >;
 export interface Review {
   id: string;
   revisionId: string | null;
   documentId: string | null;
   title: string;
-  kind: "SOURCE" | "KNOWLEDGE" | "ARTICLE";
+  kind: "SOURCE" | "KNOWLEDGE" | "ARTICLE" | "KNOWLEDGE_PROPOSAL";
+  proposalId?: string;
   submittedBy: string;
   submitterName: string;
   reviewerId: string | null;
@@ -217,6 +268,7 @@ export interface ReviewEvent {
   action?: string;
 }
 export interface ReviewDetail extends Review {
+  proposal?: import("./readerApi").KnowledgeProposal;
   document?: SourceDocument;
   knowledge?: KnowledgeDetail;
   article?: {
@@ -280,7 +332,8 @@ export async function patch<T>(url: string, body: unknown): Promise<T> {
   return (await api.http.patch<Envelope<T>>(url, body)).data.data;
 }
 export const stageApi = {
-  categories: (type?: string) => get<Category[]>("/knowledge/categories", type ? {type} : {}),
+  categories: (type?: string) =>
+    get<Category[]>("/knowledge/categories", type ? { type } : {}),
   tags: () => get<KnowledgeTag[]>("/knowledge/tags"),
   knowledge: (params: Query = {}) =>
     get<Page<KnowledgeCatalogEntry>>("/knowledge", params),
@@ -327,11 +380,18 @@ export const stageApi = {
     lockVersion: number,
     decision: "APPROVED" | "REJECTED",
     note: string,
+    sourceDecision?: {
+      acknowledgedWarnings?: string[];
+      approvedUse?: "REFERENCE_ONLY" | "TEXT_CITABLE";
+      approvedCoverage?: { unitIds: string[] };
+      coverageSnapshotHash?: string;
+    },
   ) =>
     post<ReviewDetail>(`/reviews/${id}/decisions`, {
       lockVersion,
       decision,
       note,
+      ...sourceDecision,
     }),
   feedback: (params: Query = {}) =>
     get<Page<Feedback>>("/contributions/feedback", params),

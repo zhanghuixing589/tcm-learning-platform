@@ -15,5 +15,17 @@ $env:JWT_SECRET=$secrets.jwt; $env:AI_INTERNAL_TOKEN=$secrets.internal
 $env:COOKIE_SECURE='false'; $env:SERVER_PORT="$BackendPort"
 $env:ALLOWED_ORIGINS="http://localhost:$FrontendPort,http://127.0.0.1:$FrontendPort"
 $env:AI_BASE_URL="http://127.0.0.1:$AiPort"; $env:BACKEND_URL="http://127.0.0.1:$BackendPort"
+$env:AI_BACKEND_URL="http://127.0.0.1:$BackendPort"
 $env:AVATAR_STORAGE_DIR=Join-Path $projectRoot 'runtime\avatars'
 $env:SOURCE_STORAGE_DIR=Join-Path $projectRoot 'runtime\source-files'
+# Import only the restricted application identity; root credentials never enter Java.
+$minioEnvPath=Join-Path $projectRoot 'runtime\minio.env'
+if (Test-Path -LiteralPath $minioEnvPath) {
+    foreach ($minioLine in [System.IO.File]::ReadAllLines($minioEnvPath)) {
+        if ($minioLine -match '^(TCM_MINIO_APP_ACCESS_KEY|TCM_MINIO_APP_SECRET_KEY)=(.+)$') {
+            [Environment]::SetEnvironmentVariable($Matches[1],$Matches[2],'Process')
+        }
+    }
+}
+$env:TCM_MINIO_ENDPOINT='http://127.0.0.1:19000'
+$env:TCM_MINIO_BUCKET='tcm-learning-sources'

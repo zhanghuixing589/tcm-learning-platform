@@ -67,10 +67,25 @@ export function knowledgePayload(value: KnowledgeInput): KnowledgeInput {
           )
         : [],
     evidence: value.evidence.map(
-      ({ documentId, segmentId, quoteText, locationLabel }) => ({
+      ({
+        documentId,
+        segmentId,
+        quoteText,
+        locationLabel,
+        excerptId,
+        parseRunId,
+        readingEditionId,
+        locator,
+        quoteHash,
+      }) => ({
+        excerptId,
+        parseRunId,
+        readingEditionId,
+        locator,
+        quoteHash,
         documentId,
         segmentId: segmentId || undefined,
-        quoteText: quoteText.trim(),
+        quoteText: excerptId || readingEditionId || quoteHash ? quoteText : quoteText.trim(),
         locationLabel: locationLabel || undefined,
       }),
     ),
@@ -94,7 +109,8 @@ export function knowledgePayload(value: KnowledgeInput): KnowledgeInput {
 export function validateKnowledge(value: KnowledgeInput): string[] {
   const errors: string[] = [];
   if ((value.tagIds?.length || 0) > 20) errors.push("最多选择20个通用标签");
-  if (value.tagIds && new Set(value.tagIds).size !== value.tagIds.length) errors.push("通用标签不能重复");
+  if (value.tagIds && new Set(value.tagIds).size !== value.tagIds.length)
+    errors.push("通用标签不能重复");
   if (!value.canonicalName.trim()) errors.push("请填写规范名称");
   if (!value.title.trim()) errors.push("请填写标题");
   if (!value.body.trim()) errors.push("请填写正文");
